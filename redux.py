@@ -16,8 +16,10 @@ logger.info(f"Created logger object in {argv[0]}")
 #Load dotenv file and print config (.env) to log
 load_dotenv()
 config = dotenv_values(".env")
-config['MASTER_SMOOTH_SIGMA'] = int(config['MASTER_SMOOTH_SIGMA'])
+config['MASTER_SMOOTH_SIGMA'] = float(config['MASTER_SMOOTH_SIGMA'])
 config['DL'] = int(config['DL'])
+config['APERTURE_PIX'] = int(config['APERTURE_PIX'])
+
 for key in config:
     logger.info(f"{key}, {config[key]}")
 
@@ -36,14 +38,14 @@ try:
     vars = redux_funcs.getLightFrames(config, vars)
     logger.info(f"Idenfitied frame shape as (rows x cols) {vars['rows']} {vars['cols']}")
     logger.info(f"Idenfitied frame gain (SharpCap-reported) as {vars['gain']}")
-    logger.info(f"Identified light integration time as {vars['intTimes']}")
+    logger.info(f"Identified light integration time as {vars['lightIntTime']}")
     logger.info(f"Identified filter as {vars['filters']}")
     
     ## Get Flat Frames
     logger.info(f"Gathering Flat Frames for each filter")
     vars = redux_funcs.getFlatFrames(config, vars)
     
-    logger.info(f"Full list of integration times identified as {vars['intTimes']}")
+    logger.info(f"Full list of integration times identified as {vars['flatIntTime']}")
 
     ## Get Dark Frames
     logger.info(f"Gathering Dark Frames for each integration time")
@@ -68,16 +70,33 @@ logger.info(f"Found {len(vars['biasFiles'])} bias frame files.")
 
 
 # Generate Master Frames
-## Master Bias
+## Generate Master Bias
 logger.info(f"Working on master bias frame.")
 vars = redux_funcs.generateMasterBias(config, vars)
 
-## Master Darks
+### Log Bias Frame Specs
+mean, median, std, max = redux_funcs.frameSpecs(vars['masterBias'])
+logger.info(f"Bias Frame Mean: {mean}")
+logger.info(f"Bias Frame Median: {median}")
+logger.info(f"Bias Frame STD: {std}")
+logger.info(f"Bias Frame Max: {max}")
+#redux_funcs.plotFrame(vars['masterBias'], f"Bias Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+
+## Generate Master Darks
 for intTime in vars['intTimes']:
     logger.info(f"Working on master dark frame for integration time {intTime}.")
     vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
 
-## Master Flat
+### Log Dark Frame Specs
+for intTime in vars['intTimes']:
+    mean, median, std, max = redux_funcs.frameSpecs(vars['masterDark'][intTime])
+    logger.info(f"Dark Frame [{intTime}s] Mean: {mean}")
+    logger.info(f"Dark Frame [{intTime}s] Median: {median}")
+    logger.info(f"Dark Frame [{intTime}s] STD: {std}")
+    logger.info(f"Dark Frame [{intTime}s] Max: {max}")
+    #redux_funcs.plotFrame(vars['masterDark'][intTime], f"{intTime:0.2f}s Dark Frame  \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+
+## Generate Master Flat
 try:
     logger.info(f"Working on master flat frame.")
     vars = redux_funcs.generateMasterFlat(config, vars)
@@ -85,31 +104,43 @@ except Exception as e:
     logger.warning(e)
     exit()
 
+### Log Flat Frame Specs
+mean, median, std, max = redux_funcs.frameSpecs(vars['masterFlat']/vars['flatConstant'])
+logger.info(f"Flat Frame Mean: {mean}")
+logger.info(f"Flat Frame Median: {median}")
+logger.info(f"Flat Frame STD: {std}")
+logger.info(f"Flat Frame Max: {max}")
+redux_funcs.plotFrame(vars['masterFlat']/vars['flatConstant'], f"Flat Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+
+
 # Generate Data Frame
 ## Apply Calibration Frames
 try:
     logger.info(f"Applying all calibration frames.")
-    vars = redux_funcs.generateMasterFlat(config, vars)
+    vars = redux_funcs.generateDataFrame(config, vars)
 except Exception as e:
     logger.warning(e)
     exit()
 
+### Log Data Frame Specs
+mean, median, std, max = redux_funcs.frameSpecs(vars['dataFrame'])
+logger.info(f"Data Frame Mean: {mean}")
+logger.info(f"Data Frame Median: {median}")
+logger.info(f"Data Frame STD: {std}")
+logger.info(f"Data Frame Max: {max}")
+redux_funcs.plotFrame(vars['dataFrame'], f"Data Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+
+
+# Make plots of calibration frames and data frames
 
 # Estimate Instrument Magnitude
-## Find Sources
-
-
-## Extract SubFrames
-
-## Extract Radial Profile
-
-## Fit Radial Profile
-
-## Subtract Sky Brightness
-
-## Sum Counts
+## Extract Sources, SubFrames, Radial Profile Parameters
+logger.info(f"Extracting Sources, SubFrames, and Radial Profile Parameters")
+vars = redux_funcs.findSources(config, vars)
 
 ## Calculate Instrument Magnitude
+logger.info(f"Estimating Instrument Magnitudes")
+vars = redux_funcs.getMagnitudes(config, vars)
 
 # Plots
 
