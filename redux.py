@@ -25,27 +25,34 @@ vars = {'intTimes':[], 'filters':[], \
         'rows':0, 'cols':0, 'gain':-1}
 
 # Get Frames
+#   Make sure the files pass header uniformity checks (frame size and reported gain)
 try:
     ## Get Light Frames
+    logger.info(f"Gathering Light Frames")
     vars = redux_funcs.getLightFrames(config, vars)
+    logger.info(f"Idenfitied frame shape as (rows x cols) {vars['rows']} {vars['cols']}")
+    logger.info(f"Idenfitied frame gain (SharpCap-reported) as {vars['gain']}")
+    logger.info(f"Identified light integration time as {vars['intTimes']}")
+    logger.info(f"Identified filter as {vars['filters']}")
+    
+    ## Get Flat Frames
+    logger.info(f"Gathering Flat Frames for each filter")
+    vars = redux_funcs.getFlatFrames(config, vars)
+    
+    logger.info(f"Full list of integration times identified as {vars['intTimes']}")
+
+    ## Get Dark Frames
+    logger.info(f"Gathering Dark Frames for each integration time")
+
+    vars = redux_funcs.getDarkFrames(config, vars)
 
     ## Get Bias Frames
+    logger.info(f"Gathering Bias Frames just in case, I guess?\nRecall that if there are intTimes for flats and lights that correspond"+\
+                " to darks, then Bias Frames are unneeded. i.e., Bias Frames are only needed if you need to scale Thermal Frames.")
     vars = redux_funcs.getBiasFrames(config, vars)
-    
-    ## Get Dark Frames
-    vars = redux_funcs.getFlatFrames(config, vars)
-
-    ## Get Flat Frames
-    vars = redux_funcs.getDarkFrames(config, vars)
 
 except Exception as e:
     logger.warning(e)
-
-
-logger.info(f"Idenfitied frame shape as (rows x cols) {vars['rows']} {vars['cols']}")
-logger.info(f"Idenfitied frame gain (SharpCap-reported) as {vars['gain']}")
-logger.info(f"Identified integration times as {vars['intTimes']}")
-logger.info(f"Identified filter as {vars['filters']}")
 
 logger.info(f"Found {len(vars['lightFiles'])} light frame files.")
 logger.info(f"Found {len(vars['flatFiles'])} flat frame files.")
