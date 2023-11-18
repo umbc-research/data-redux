@@ -13,16 +13,17 @@ logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m
 logger = logging.getLogger(__name__)
 logger.info(f"Created logger object in {argv[0]}")
 
-#Load dotenv file
+#Load dotenv file and print config (.env) to log
 load_dotenv()
 config = dotenv_values(".env")
 for key in config:
     logger.info(f"{key}, {config[key]}")
 
 #Runtime variables
-vars = {'intTimes':[], 'filters':[], \
+vars = {'rows':0, 'cols':0, 'gain':-1,\
+        'intTimes':[], 'filters':[], 'flatConstant':-1,\
         'lightFiles':[], 'biasFiles':[], 'darkFiles':[], 'flatFiles':[],\
-        'rows':0, 'cols':0, 'gain':-1}
+        'masterBias':None, 'masterDark':None, 'masterFlat':None, 'masterData':None }
 
 # Get Frames
 #   Make sure the files pass header uniformity checks (frame size and reported gain)
@@ -47,24 +48,39 @@ try:
     vars = redux_funcs.getDarkFrames(config, vars)
 
     ## Get Bias Frames
-    logger.info(f"Gathering Bias Frames just in case, I guess?\nRecall that if there are intTimes for flats and lights that correspond"+\
-                " to darks, then Bias Frames are unneeded. i.e., Bias Frames are only needed if you need to scale Thermal Frames.")
+    logger.info(f"Gathering Bias Frames just in case, I guess? Recall that if there are\n"+\
+                " intTimes for flats and lights that correspond to darks, then Bias Frames\n"+\
+                " are unneeded. i.e., Bias Frames are only needed if you need to scale Thermal Frames.")
     vars = redux_funcs.getBiasFrames(config, vars)
 
 except Exception as e:
     logger.warning(e)
+    exit()
 
+# Dump some info to the log
 logger.info(f"Found {len(vars['lightFiles'])} light frame files.")
 logger.info(f"Found {len(vars['flatFiles'])} flat frame files.")
 logger.info(f"Found {len(vars['darkFiles'])} dark frame files.")
 logger.info(f"Found {len(vars['biasFiles'])} bias frame files.")
 
+
 # Generate Master Frames
 ## Master Bias
+logger.info(f"Working on master bias frame.")
+redux_funcs.generateMasterBias(config, vars)
 
 ## Master Darks
+vars['masterDark'] = {}
+for intTime in vars['intTimes']:
+    logger.info(f"Working on master dark frame for integration time {intTime}.")
+    vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
 
 ## Master Flat
+try:
+    logger.info(f"Working on master flat frame.")
+except Exception as e:
+    logger.warning(e)
+    exit()
 
 # Generate Data Frame
 ## Apply Calibration Frames

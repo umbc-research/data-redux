@@ -74,9 +74,7 @@ def getBiasFrames(config, vars):
             if not vars['rows'] == hdul_bias[0].header['NAXIS2']: raise Exception(f"{biasFile} Conflicting Frame Size")
             if not vars['cols'] == hdul_bias[0].header['NAXIS1']: raise Exception(f"{biasFile} Conflicting Frame Size")
             if not vars['gain'] == hdul_bias[0].header['GAIN']: raise Exception(f"{biasFile} Conflicting Gain Values")
-
     return vars
-
 
 def getFlatFrames(config, vars):
     vars['flatFiles'] = glob(config['FLAT_DIR']+"/**/*.fits", recursive=True)
@@ -114,3 +112,64 @@ def getDarkFrames(config, vars):
 
     vars['darkFiles']  = neededDarks
     return vars
+
+
+def generateMasterBias(config, vars):
+    biasStack = []
+    for biasFile in vars['biasFiles']:
+        with fits.open(biasFile) as hdul_bias:
+            biasStack.append(hdul_bias[0].data)
+
+    #Basic outlier detection. Not fleshed out yet :( 
+    # means = np.mean(biasStack, axis=(1,2))
+    # medians = np.median(biasStack, axis=(1,2))
+    # stds = np.std(biasStack, axis=(1,2))
+
+    # meanSTD = np.std(means)
+    # if len(means[means - np.median(means) > 3*meanSTD]) > 0:
+    #     print("Outlier in Bias Frame Means")
+
+    # medianSTD = np.std(medians)
+    # if len(medians[medians - np.median(medians) > 3*medianSTD]) > 0:
+    #     print("Outlier in Bias Frame Medians")
+
+    # stdSTD = np.std(stds)
+    # if len(stds[stds - np.median(stds) > 3*stdSTD]) > 0:
+    #     print("Outlier in Bias Frame STDs")
+    
+    if not config['MASTER_SMOOTH_SIGMA'] == 0:
+        vars['masterBias'] = gaussian_filter(np.median(biasStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+    else:
+        vars['masterBias'] = np.median(biasStack, axis=0)
+
+def generateMasterDark(config, vars, intTime):
+    darkStack = []
+    for darkFile in vars['darkFiles']:
+        with fits.open(darkFile) as hdul_dark:
+            darkStack.append(hdul_dark[0].data)
+
+    if not config['MASTER_SMOOTH_SIGMA'] == 0:
+        return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+    else:
+        return np.median(darkStack, axis=0)
+
+def generateMasterFlat(config, vars):
+    if vars['masterDark'] == None: 
+        raise Exception("Master Darks not defined yet.")
+    
+    flatStack = []
+    for i, flatFile in enumerate(vars['flatFiles']):
+        with fits.open(flatFile) as hdul_flat:
+            intTime = hdul_flat[0].header['EXPTIME']
+            flatIntTime = intTime
+            try:
+                flatStack[i] = hdul_flat[0].data - vars['masterDark'][flatIntTime] 
+            except:
+                raise Exception(f"Master Dark of integration time {flatIntTime} not defined.")
+                          
+    if not config['MASTER_SMOOTH_SIGMA'] == 0:
+        vars['masterFlat'] = gaussian_filter(np.median(flatStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+    else:
+        vars['masterFlat'] = np.median(flatStack, axis=0)
+
+    vars['flatConstant'] = np.mean(vars['masterFlat'])
