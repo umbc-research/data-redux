@@ -25,7 +25,8 @@ for key in config:
 vars = {'rows':0, 'cols':0, 'gain':-1, 'lightIntTime':-1, 'flatIntTime':-1,\
         'intTimes':[], 'filters':[], 'flatConstant':-1,\
         'lightFiles':[], 'biasFiles':[], 'darkFiles':[], 'flatFiles':[],\
-        'masterBias':None, 'masterDark':{}, 'masterFlat':None, 'dataFrame':None }
+        'masterBias':None, 'masterDark':{}, 'masterFlat':None, 'dataFrame':None,\
+        'subFrames':{}, 'radii':None}
 
 # Get Frames
 #   Make sure the files pass header uniformity checks (frame size and reported gain)
@@ -94,9 +95,9 @@ except Exception as e:
     exit()
 
 
-
 # Estimate Instrument Magnitude
 ## Find Sources
+
 
 ## Extract SubFrames
 
