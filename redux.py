@@ -2,7 +2,7 @@
 import logging
 from sys import argv, exit
 from datetime import datetime
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 #File Handling
 from glob import glob
@@ -22,17 +22,18 @@ from photutils.detection import DAOStarFinder
 #Author-defined imports
 from redux_funcs import gaussian_1d
 
-#Global Vars
-
-
 if __name__ == "__main__":
-    logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m%dT%H")),\
+    logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m%dT%H%M")),\
         encoding='utf-8', format='%(asctime)s %(levelname)s %(message)s', \
         datefmt='%Y%m%dT%H%M%S',level=logging.INFO)
     logger = logging.getLogger(__name__)
     logger.info(f"Created logger object in {argv[0]}")
 
     #Load dotenv file
+    load_dotenv()
+    config = dotenv_values(".env")
+    for key in config:
+        logger.info(f"{key}, {config[key]}")
 
     # Get Frames
     ## Get Light Frames
