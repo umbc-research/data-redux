@@ -142,6 +142,8 @@ def generateMasterBias(config, vars):
     else:
         vars['masterBias'] = np.median(biasStack, axis=0)
 
+    return vars
+
 def generateMasterDark(config, vars, intTime):
     darkStack = []
     for darkFile in vars['darkFiles']:
@@ -152,20 +154,20 @@ def generateMasterDark(config, vars, intTime):
         return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
     else:
         return np.median(darkStack, axis=0)
+    return vars
 
 def generateMasterFlat(config, vars):
-    if vars['masterDark'] == None: 
-        raise Exception("Master Darks not defined yet.")
+    if vars['masterDark'] == None: raise Exception("Master Darks not defined!")
     
     flatStack = []
     for i, flatFile in enumerate(vars['flatFiles']):
         with fits.open(flatFile) as hdul_flat:
             intTime = hdul_flat[0].header['EXPTIME']
-            flatIntTime = intTime
+            vars['flatIntTime'] = intTime
             try:
-                flatStack[i] = hdul_flat[0].data - vars['masterDark'][flatIntTime] 
+                flatStack[i] = hdul_flat[0].data - vars['masterDark'][vars['flatIntTime']] 
             except:
-                raise Exception(f"Master Dark of integration time {flatIntTime} not defined.")
+                raise Exception(f"Master Dark of integration time {vars['flatIntTime']} not defined!")
                           
     if not config['MASTER_SMOOTH_SIGMA'] == 0:
         vars['masterFlat'] = gaussian_filter(np.median(flatStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
@@ -173,3 +175,20 @@ def generateMasterFlat(config, vars):
         vars['masterFlat'] = np.median(flatStack, axis=0)
 
     vars['flatConstant'] = np.mean(vars['masterFlat'])
+    return vars
+
+def generateDataFrame(config, vars):
+    lightStack = []
+    if vars['flatConstant'] == -1: raise Exception("Flat constant not defined!")
+    for lightFile in vars['lightFiles']:
+        with fits.open(lightFile) as hdul_light:
+            intTime = hdul_light[0].header['EXPTIME']
+            vars['lightIntTime'] = intTime
+            # Applying calibration to each light frame before stacking ... is this right?
+            lightStack.append( vars['flatConstant']*np.abs(hdul_light[0].data - vars['masterDark'][vars['lightIntTime']])/vars['masterFlat'] )
+
+    if not config['MASTER_SMOOTH_SIGMA'] == 0:
+        vars['dataFrame'] = gaussian_filter(np.median(lightStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+    else:
+        vars['dataFrame'] = np.median(lightStack, axis=0)
+    return vars

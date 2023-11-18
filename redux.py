@@ -20,10 +20,10 @@ for key in config:
     logger.info(f"{key}, {config[key]}")
 
 #Runtime variables
-vars = {'rows':0, 'cols':0, 'gain':-1,\
+vars = {'rows':0, 'cols':0, 'gain':-1, 'lightIntTime':-1, 'flatIntTime':-1,\
         'intTimes':[], 'filters':[], 'flatConstant':-1,\
         'lightFiles':[], 'biasFiles':[], 'darkFiles':[], 'flatFiles':[],\
-        'masterBias':None, 'masterDark':None, 'masterFlat':None, 'masterData':None }
+        'masterBias':None, 'masterDark':None, 'masterFlat':None, 'dataFrame':None }
 
 # Get Frames
 #   Make sure the files pass header uniformity checks (frame size and reported gain)
@@ -67,23 +67,30 @@ logger.info(f"Found {len(vars['biasFiles'])} bias frame files.")
 # Generate Master Frames
 ## Master Bias
 logger.info(f"Working on master bias frame.")
-redux_funcs.generateMasterBias(config, vars)
+vars = redux_funcs.generateMasterBias(config, vars)
 
 ## Master Darks
 vars['masterDark'] = {}
 for intTime in vars['intTimes']:
     logger.info(f"Working on master dark frame for integration time {intTime}.")
-    vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
+    vars = redux_funcs.generateMasterDark(config, vars, intTime)
 
 ## Master Flat
 try:
     logger.info(f"Working on master flat frame.")
+    vars = redux_funcs.generateMasterFlat(config, vars)
 except Exception as e:
     logger.warning(e)
     exit()
 
 # Generate Data Frame
 ## Apply Calibration Frames
+try:
+    logger.info(f"Applying all calibration frames.")
+    vars = redux_funcs.generateMasterFlat(config, vars)
+except Exception as e:
+    logger.warning(e)
+    exit()
 
 # Estimate Instrument Magnitude
 ## Find Sources
