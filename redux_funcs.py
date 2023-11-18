@@ -21,7 +21,7 @@ def gaussian_1d(x, mu, sigma, amplitude, offset):
 def fit_gaussian_1d(x_data, y_data, p0):
     # p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
     # bounds behaves by giving array of min constraints and array of max constraints
-    params, _ = curve_fit(gaussian_1d, x_data, y_data, p0, bounds=[[0,0,0,0],[10000,100,100000,100000]])
+    params, _ = curve_fit(gaussian_1d, x_data, y_data, p0, bounds=[[0,0,0,0],[10000,1000,np.inf,np.inf]])
 
     #Calculate coefficient of determination
     res = y_data - gaussian_1d(x_data, *params)
@@ -49,6 +49,13 @@ def extract_radial_data(data, xC, yC):
     averageCountsPerRadiusBin = weightedRadiusHistogram / unweightedRadiusHistogram
     return averageCountsPerRadiusBin
 
+def plotFrame(frame, title):
+    mean, median, std, max = frameSpecs(frame)
+    plt.figure()
+    plt.imshow(frame, cmap='gray', vmin=mean-std, vmax=mean+std)
+    plt.title(title)
+    plt.show()
+
 def getLightFrames(config, vars):
     vars['lightFiles'] = glob(config['LIGHT_DIR']+"/**/*.fits", recursive=True)
     for i, lightFile in enumerate(vars['lightFiles']):
@@ -57,12 +64,13 @@ def getLightFrames(config, vars):
                 vars['rows'] = hdul_light[0].header['NAXIS2'] #repetitive, but whatever
                 vars['cols'] = hdul_light[0].header['NAXIS1']
                 vars['gain'] = hdul_light[0].header['GAIN']
+                vars['lightIntTime'] = hdul_light[0].header['EXPTIME']
             else:
                 if not vars['rows'] == hdul_light[0].header['NAXIS2']: raise Exception(f"{lightFile} Conflicting Frame Size")
                 if not vars['cols'] == hdul_light[0].header['NAXIS1']: raise Exception(f"{lightFile} Conflicting Frame Size")
                 if not vars['gain'] == hdul_light[0].header['GAIN']: raise Exception(f"{lightFile} Conflicting Gain Values")
 
-            vars['intTimes'].append(hdul_light[0].header['EXPTIME'])
+            vars['intTimes'].append(vars['lightIntTime'])
             vars['filters'].append(hdul_light[0].header['FILTER'])
         vars['intTimes'] = list(set(vars['intTimes']))
         vars['filters'] = list(set(vars['filters']))
@@ -92,7 +100,8 @@ def getFlatFrames(config, vars):
 
     for flatFile in neededFlats:
         with fits.open(flatFile) as hdul_flat:
-            vars['intTimes'].append(hdul_flat[0].header['EXPTIME'])
+            vars['flatIntTime'] = hdul_flat[0].header['EXPTIME']
+            vars['intTimes'].append(vars['flatIntTime'])
 
     vars['intTimes'] = list(set(vars['intTimes']))
     vars['flatFiles'] = neededFlats
@@ -149,7 +158,8 @@ def generateMasterDark(config, vars, intTime):
     darkStack = []
     for darkFile in vars['darkFiles']:
         with fits.open(darkFile) as hdul_dark:
-            darkStack.append(hdul_dark[0].data)
+            if hdul_dark[0].header['EXPTIME'] == intTime:
+                darkStack.append(hdul_dark[0].data)
 
     if not config['MASTER_SMOOTH_SIGMA'] == 0:
         return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
@@ -162,19 +172,18 @@ def generateMasterFlat(config, vars):
     flatStack = []
     for flatFile in vars['flatFiles']:
         with fits.open(flatFile) as hdul_flat:
-            vars['flatIntTime'] = hdul_flat[0].header['EXPTIME']
-
             try:
-                flatStack.append(hdul_flat[0].data - vars['masterDark'][vars['flatIntTime']]) 
-            except:
-                raise Exception(f"Master Dark of integration time {vars['flatIntTime']} not defined!")
+                
+                flatStack.append(np.abs(hdul_flat[0].data - vars['masterDark'][vars['flatIntTime']]))
+            except Exception as e:
+                raise Exception(f"Master Dark of integration time {vars['flatIntTime']} not defined!"+str(e))
                           
     if not config['MASTER_SMOOTH_SIGMA'] == 0:
         vars['masterFlat'] = gaussian_filter(np.median(flatStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
     else:
         vars['masterFlat'] = np.median(flatStack, axis=0)
 
-    vars['flatConstant'] = np.mean(vars['masterFlat'])
+    vars['flatConstant'] = np.mean(vars['masterFlat'][vars['masterFlat']<55000])
     return vars
 
 def generateDataFrame(config, vars):
@@ -182,10 +191,8 @@ def generateDataFrame(config, vars):
     if vars['flatConstant'] == -1: raise Exception("Flat constant not defined!")
     for lightFile in vars['lightFiles']:
         with fits.open(lightFile) as hdul_light:
-            intTime = hdul_light[0].header['EXPTIME']
-            vars['lightIntTime'] = intTime
             # Applying calibration to each light frame before stacking ... is this right?
-            lightStack.append( vars['flatConstant']*np.abs(hdul_light[0].data - vars['masterDark'][vars['lightIntTime']])/vars['masterFlat'] )
+            lightStack.append( np.abs(hdul_light[0].data - vars['masterDark'][vars['lightIntTime']])/(vars['masterFlat']/vars['flatConstant']) )
 
     if not config['MASTER_SMOOTH_SIGMA'] == 0:
         vars['dataFrame'] = gaussian_filter(np.median(lightStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
@@ -203,16 +210,31 @@ def findSources(config, vars):
     starFind = DAOStarFinder(threshold=median, fwhm=20.0, sky=mean, exclude_border=True, brightest=10, peakmax=max)
     sourceList = starFind(vars['dataFrame'])
 
-    vars['radii'] = np.linspace(0, vars['DL']*2, vars['DL']*2)
+    vars['radii'] = np.linspace(0, config['DL']*2, config['DL']*2)
 
     for source in sourceList:
         sourceID = source[0]
         xc, yc = source[2], source[1]
-        subFrame = vars['dataFrame'][int(xc-vars['DL']):int(xc+vars['DL']),int(yc-vars['DL']):int(yc+vars['DL'])]
-        radial_data_raw = extract_radial_data(subFrame, xC=vars['DL'], yC=vars['DL'])[:vars['DL']]
+        subFrame = vars['dataFrame'][int(xc-config['DL']):int(xc+config['DL']),int(yc-config['DL']):int(yc+config['DL'])]
+        radial_data_raw = extract_radial_data(subFrame, xC=config['DL'], yC=config['DL'])[:config['DL']]
         radialData = np.concatenate((radial_data_raw[::-1], radial_data_raw))
-        p0 = [vars['DL'], 1, max, mean]
+        p0 = [config['DL'], 1, max, mean]
+        print(p0)
         params, R2 = fit_gaussian_1d(vars['radii'], radialData, p0)
 
         #params[1] = np.abs(params[1])
-        vars['subFrames'][sourceID] = (subFrame, radialData, params, R2)
+        vars['subFrames'][sourceID] = [subFrame, radialData, params, R2, 0]
+        return vars
+
+def getMagnitudes(config, vars):
+    Y, X = np.ogrid[:config['DL']*2, :config['DL']*2]
+    dist = np.sqrt((X-config['DL'])**2 + (Y-config['DL'])**2)
+    ones = np.ones((config['DL']*2, config['DL']*2))
+
+    for sourceID in vars['subFrames']:
+        subFrame, _, params, _, _ = vars['subFrames'][sourceID]
+        counts = np.sum(subFrame, where=dist<config['APERTURE_PIX'])
+        nPix = np.sum(ones, where=dist<config['APERTURE_PIX'])
+        vars['subFrames'][sourceID][4] = -2.5*np.log10(counts/nPix/vars['lightIntTime'])
+
+    return vars
