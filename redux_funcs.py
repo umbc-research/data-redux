@@ -19,8 +19,9 @@ def gaussian_1d(x, mu, sigma, amplitude, offset):
     return amplitude * np.exp( -((x-mu)/sigma)**2/2 ) + offset
 
 def fit_gaussian_1d(x_data, y_data, p0):
-    #p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
-    params, _ = curve_fit(gaussian_1d, x_data, y_data, p0)
+    # p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
+    # bounds behaves by giving array of min constraints and array of max constraints
+    params, _ = curve_fit(gaussian_1d, x_data, y_data, p0, bounds=[[0,0,0,0],[10000,100,100000,100000]])
 
     #Calculate coefficient of determination
     res = y_data - gaussian_1d(x_data, *params)
@@ -155,7 +156,6 @@ def generateMasterDark(config, vars, intTime):
     else:
         return np.median(darkStack, axis=0)
 
-
 def generateMasterFlat(config, vars):
     if len(vars['masterDark']) == 0: raise Exception("Master Darks not defined!")
     
@@ -193,5 +193,26 @@ def generateDataFrame(config, vars):
         vars['dataFrame'] = np.median(lightStack, axis=0)
     return vars
 
+def frameSpecs(frame):
+    mean, median, std, max = np.mean(frame), np.median(frame), \
+        np.std(frame), np.max(frame)
+    return mean, median, std, max
+
 def findSources(config, vars):
-    pass
+    mean, median, std, max = frameSpecs(vars['dataFrame'])
+    starFind = DAOStarFinder(threshold=median, fwhm=20.0, sky=mean, exclude_border=True, brightest=10, peakmax=max)
+    sourceList = starFind(vars['dataFrame'])
+
+    vars['radii'] = np.linspace(0, vars['DL']*2, vars['DL']*2)
+
+    for source in sourceList:
+        sourceID = source[0]
+        xc, yc = source[2], source[1]
+        subFrame = vars['dataFrame'][int(xc-vars['DL']):int(xc+vars['DL']),int(yc-vars['DL']):int(yc+vars['DL'])]
+        radial_data_raw = extract_radial_data(subFrame, xC=vars['DL'], yC=vars['DL'])[:vars['DL']]
+        radialData = np.concatenate((radial_data_raw[::-1], radial_data_raw))
+        p0 = [vars['DL'], 1, max, mean]
+        params, R2 = fit_gaussian_1d(vars['radii'], radialData, p0)
+
+        #params[1] = np.abs(params[1])
+        vars['subFrames'][sourceID] = (subFrame, radialData, params, R2)
