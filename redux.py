@@ -4,71 +4,79 @@ from sys import argv, exit
 from datetime import datetime
 from dotenv import load_dotenv, dotenv_values
 
-#File Handling
-from glob import glob
-from astropy.io import fits
-
-#Plotting
-from matplotlib import pyplot as plt
-from matplotlib.patches import Circle
-
-#Numerical bits
-from scipy.ndimage import gaussian_filter
-import numpy as np
-
-#Photometry Utilities
-from photutils.detection import DAOStarFinder
-
 #Author-defined imports
-from redux_funcs import gaussian_1d
+import redux_funcs
 
-if __name__ == "__main__":
-    logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m%dT%H%M")),\
-        encoding='utf-8', format='%(asctime)s %(levelname)s %(message)s', \
-        datefmt='%Y%m%dT%H%M%S',level=logging.INFO)
-    logger = logging.getLogger(__name__)
-    logger.info(f"Created logger object in {argv[0]}")
+logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m%dT%H%M")),\
+    encoding='utf-8', format='%(asctime)s %(levelname)s %(message)s', \
+    datefmt='%Y%m%dT%H%M%S',level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info(f"Created logger object in {argv[0]}")
 
-    #Load dotenv file
-    load_dotenv()
-    config = dotenv_values(".env")
-    for key in config:
-        logger.info(f"{key}, {config[key]}")
+#Load dotenv file
+load_dotenv()
+config = dotenv_values(".env")
+for key in config:
+    logger.info(f"{key}, {config[key]}")
 
-    # Get Frames
+#Runtime variables
+vars = {'intTimes':[], 'filters':[], \
+        'lightFiles':[], 'biasFiles':[], 'darkFiles':[], 'flatFiles':[],\
+        'rows':0, 'cols':0, 'gain':-1}
+
+# Get Frames
+try:
     ## Get Light Frames
+    vars = redux_funcs.getLightFrames(config, vars)
 
     ## Get Bias Frames
-
+    vars = redux_funcs.getBiasFrames(config, vars)
+    
     ## Get Dark Frames
+    vars = redux_funcs.getFlatFrames(config, vars)
 
     ## Get Flat Frames
+    vars = redux_funcs.getDarkFrames(config, vars)
 
-    # Generate Master Frames
-    ## Master Bias
+except Exception as e:
+    logger.warning(e)
 
-    ## Master Darks
 
-    ## Master Flat
+logger.info(f"Idenfitied frame shape as (rows x cols) {vars['rows']} {vars['cols']}")
+logger.info(f"Idenfitied frame gain (SharpCap-reported) as {vars['gain']}")
+logger.info(f"Identified integration times as {vars['intTimes']}")
+logger.info(f"Identified filter as {vars['filters']}")
 
-    # Generate Data Frame
-    ## Apply Calibration Frames
+logger.info(f"Found {len(vars['lightFiles'])} light frame files.")
+logger.info(f"Found {len(vars['flatFiles'])} flat frame files.")
+logger.info(f"Found {len(vars['darkFiles'])} dark frame files.")
+logger.info(f"Found {len(vars['biasFiles'])} bias frame files.")
 
-    # Estimate Instrument Magnitude
-    ## Find Sources
+# Generate Master Frames
+## Master Bias
 
-    ## Extract SubFrames
+## Master Darks
 
-    ## Extract Radial Profile
+## Master Flat
 
-    ## Fit Radial Profile
+# Generate Data Frame
+## Apply Calibration Frames
 
-    ## Subtract Sky Brightness
+# Estimate Instrument Magnitude
+## Find Sources
 
-    ## Sum Counts
+## Extract SubFrames
 
-    ## Calculate Instrument Magnitude
+## Extract Radial Profile
 
-    # Plots
+## Fit Radial Profile
 
-    
+## Subtract Sky Brightness
+
+## Sum Counts
+
+## Calculate Instrument Magnitude
+
+# Plots
+
+
