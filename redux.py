@@ -16,6 +16,8 @@ logger.info(f"Created logger object in {argv[0]}")
 #Load dotenv file and print config (.env) to log
 load_dotenv()
 config = dotenv_values(".env")
+config['MASTER_SMOOTH_SIGMA'] = int(config['MASTER_SMOOTH_SIGMA'])
+config['DL'] = int(config['DL'])
 for key in config:
     logger.info(f"{key}, {config[key]}")
 
@@ -23,7 +25,7 @@ for key in config:
 vars = {'rows':0, 'cols':0, 'gain':-1, 'lightIntTime':-1, 'flatIntTime':-1,\
         'intTimes':[], 'filters':[], 'flatConstant':-1,\
         'lightFiles':[], 'biasFiles':[], 'darkFiles':[], 'flatFiles':[],\
-        'masterBias':None, 'masterDark':None, 'masterFlat':None, 'dataFrame':None }
+        'masterBias':None, 'masterDark':{}, 'masterFlat':None, 'dataFrame':None }
 
 # Get Frames
 #   Make sure the files pass header uniformity checks (frame size and reported gain)
@@ -70,10 +72,9 @@ logger.info(f"Working on master bias frame.")
 vars = redux_funcs.generateMasterBias(config, vars)
 
 ## Master Darks
-vars['masterDark'] = {}
 for intTime in vars['intTimes']:
     logger.info(f"Working on master dark frame for integration time {intTime}.")
-    vars = redux_funcs.generateMasterDark(config, vars, intTime)
+    vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
 
 ## Master Flat
 try:
@@ -91,6 +92,8 @@ try:
 except Exception as e:
     logger.warning(e)
     exit()
+
+
 
 # Estimate Instrument Magnitude
 ## Find Sources
@@ -110,3 +113,4 @@ except Exception as e:
 # Plots
 
 
+logger.info(f"Fin.")

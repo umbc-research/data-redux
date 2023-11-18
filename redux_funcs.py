@@ -100,7 +100,7 @@ def getFlatFrames(config, vars):
 def getDarkFrames(config, vars):
     vars['darkFiles'] = glob(config['DARK_DIR']+"/**/*.fits", recursive=True)
     neededDarks = []
-    for darkFile in  vars['darkFiles']:
+    for darkFile in vars['darkFiles']:
         with fits.open(darkFile) as hdul_dark:
             intTime = hdul_dark[0].header['EXPTIME']
             if intTime in vars['intTimes']:
@@ -112,7 +112,6 @@ def getDarkFrames(config, vars):
 
     vars['darkFiles']  = neededDarks
     return vars
-
 
 def generateMasterBias(config, vars):
     biasStack = []
@@ -138,6 +137,7 @@ def generateMasterBias(config, vars):
     #     print("Outlier in Bias Frame STDs")
     
     if not config['MASTER_SMOOTH_SIGMA'] == 0:
+        print(type(config['MASTER_SMOOTH_SIGMA']))
         vars['masterBias'] = gaussian_filter(np.median(biasStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
     else:
         vars['masterBias'] = np.median(biasStack, axis=0)
@@ -154,18 +154,18 @@ def generateMasterDark(config, vars, intTime):
         return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
     else:
         return np.median(darkStack, axis=0)
-    return vars
+
 
 def generateMasterFlat(config, vars):
-    if vars['masterDark'] == None: raise Exception("Master Darks not defined!")
+    if len(vars['masterDark']) == 0: raise Exception("Master Darks not defined!")
     
     flatStack = []
-    for i, flatFile in enumerate(vars['flatFiles']):
+    for flatFile in vars['flatFiles']:
         with fits.open(flatFile) as hdul_flat:
-            intTime = hdul_flat[0].header['EXPTIME']
-            vars['flatIntTime'] = intTime
+            vars['flatIntTime'] = hdul_flat[0].header['EXPTIME']
+
             try:
-                flatStack[i] = hdul_flat[0].data - vars['masterDark'][vars['flatIntTime']] 
+                flatStack.append(hdul_flat[0].data - vars['masterDark'][vars['flatIntTime']]) 
             except:
                 raise Exception(f"Master Dark of integration time {vars['flatIntTime']} not defined!")
                           
@@ -192,3 +192,6 @@ def generateDataFrame(config, vars):
     else:
         vars['dataFrame'] = np.median(lightStack, axis=0)
     return vars
+
+def findSources(config, vars):
+    pass
