@@ -1,15 +1,29 @@
+#Administrative Pkgs, logging
 import logging
 from sys import argv, exit
 from datetime import datetime
+from dotenv import load_dotenv
 
+#File Handling
+from glob import glob
+from astropy.io import fits
+
+#Plotting
 from matplotlib import pyplot as plt
 from matplotlib.patches import Circle
 
+#Numerical bits
 from scipy.ndimage import gaussian_filter
 import numpy as np
 
+#Photometry Utilities
+from photutils.detection import DAOStarFinder
+
 #Author-defined imports
 from redux_funcs import gaussian_1d
+
+#Global Vars
+
 
 if __name__ == "__main__":
     logging.basicConfig(filename='redux_{}.log'.format(datetime.now().strftime("%Y%m%dT%H")),\
@@ -17,6 +31,8 @@ if __name__ == "__main__":
         datefmt='%Y%m%dT%H%M%S',level=logging.INFO)
     logger = logging.getLogger(__name__)
     logger.info(f"Created logger object in {argv[0]}")
+
+    #Load dotenv file
 
     # Get Frames
     ## Get Light Frames
