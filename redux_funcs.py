@@ -155,15 +155,19 @@ def generateMasterBias(config, vars):
 
 def generateMasterDark(config, vars, intTime):
     darkStack = []
+
     for darkFile in vars['darkFiles']:
         with fits.open(darkFile) as hdul_dark:
             if hdul_dark[0].header['EXPTIME'] == intTime:
                 darkStack.append(hdul_dark[0].data)
 
-    if not config['MASTER_SMOOTH_SIGMA'] == 0:
-        return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+    if len(darkStack) == 0:
+        raise Exception(f"No dark frames collected for this integration time ({intTime}s)")    
     else:
-        return np.median(darkStack, axis=0)
+        if not config['MASTER_SMOOTH_SIGMA'] == 0:
+            return gaussian_filter(np.median(darkStack, axis=0), sigma=config['MASTER_SMOOTH_SIGMA'])
+        else:
+            return np.median(darkStack, axis=0)
 
 def generateMasterFlat(config, vars):
     if len(vars['masterDark']) == 0: raise Exception("Master Darks not defined!")

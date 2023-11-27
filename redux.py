@@ -49,7 +49,6 @@ try:
 
     ## Get Dark Frames
     logger.info(f"Gathering Dark Frames for each integration time")
-
     vars = redux_funcs.getDarkFrames(config, vars)
 
     ## Get Bias Frames
@@ -85,16 +84,25 @@ redux_funcs.plotFrame(vars['masterBias'], f"Bias Frame \nMean:{mean:0.2f}; Media
 ## Generate Master Darks
 for intTime in vars['intTimes']:
     logger.info(f"Working on master dark frame for integration time {intTime}.")
-    vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
+    try:
+        vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
+    except Exception as e:
+        logger.warning(e)
+        logger.info("Removing this intTime from pipeline.")
+        vars['intTimes'].remove(intTime)
 
 ### Log Dark Frame Specs
 for intTime in vars['intTimes']:
-    mean, median, std, max = redux_funcs.frameSpecs(vars['masterDark'][intTime])
-    logger.info(f"Dark Frame [{intTime}s] Mean: {mean}")
-    logger.info(f"Dark Frame [{intTime}s] Median: {median}")
-    logger.info(f"Dark Frame [{intTime}s] STD: {std}")
-    logger.info(f"Dark Frame [{intTime}s] Max: {max}")
-    redux_funcs.plotFrame(vars['masterDark'][intTime], f"{intTime:0.2f}s Dark Frame  \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", f"dark_{'-'.join(str(intTime).split('.'))}")
+    try:
+        mean, median, std, max = redux_funcs.frameSpecs(vars['masterDark'][intTime])
+        logger.info(f"Dark Frame [{intTime}s] Mean: {mean}")
+        logger.info(f"Dark Frame [{intTime}s] Median: {median}")
+        logger.info(f"Dark Frame [{intTime}s] STD: {std}")
+        logger.info(f"Dark Frame [{intTime}s] Max: {max}")
+        redux_funcs.plotFrame(vars['masterDark'][intTime], f"{intTime:0.2f}s Dark Frame  \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", f"dark_{'-'.join(str(intTime).split('.'))}")
+    except KeyError as e:
+        logger.warning(e)
+        logger.info("")
 
 ## Generate Master Flat
 try:
