@@ -132,7 +132,7 @@ for lightFilter in redux.frameListDict['light'].keys():
 
             finalLight = lights()
 
-            plt.figure(figsize=(12,8))
+            figure = plt.figure(figsize=(12,8))
             plt.imshow(finalLight.data, \
                        vmin = finalLight.mean - finalLight.std, vmax = finalLight.mean + finalLight.std, \
                        cmap='gray'
@@ -141,6 +141,7 @@ for lightFilter in redux.frameListDict['light'].keys():
             plt.title(f"Min,Max: {finalLight.min:0.1f}, {finalLight.max:0.1f}; Median: {finalLight.median:0.1f};"+\
                       f"Mean: {finalLight.mean:0.1f}; STD: {finalLight.std:0.1f}\n{finalLight}")
             plt.tight_layout()
+            figure.canvas.manager.window.move(0,0)
             plt.show()
             
 
