@@ -13,6 +13,7 @@ class Redux:
         self.frameListDict = {}
         self.level = 'INFO'
         self.FrameLists = []
+        self.setProgramArguments()
 
     def makeLog(self):
         LVL = logging.DEBUG if self.level == 'DEBUG' else logging.INFO
@@ -80,7 +81,78 @@ class Redux:
                                 self.FrameLists.append(self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime])
                             except KeyError as e: #Couldn't find type dict, trying to add type dict
                                 print(e)         
-    
+
+    def setProgramArguments(self):
+        description = \
+        """
+        Data Reduction Pipeline for UMBC Observatory
+        Reduces raw light frames to top-of-atmosphere instrument magnitudes.
+        Currently works only for point sources.
+        """
+
+        parser = argparse.ArgumentParser(\
+                            prog='data_redux', allow_abbrev=True,\
+                            #usage="python %(prog)s arguments",\
+                            description=description,\
+                            epilog='Submit github issue with any quesitons or concerns.')
+
+        ## OPTIONAL ARGUMENTS
+        # Logging Level
+        parser.add_argument("--level", metavar="[]", action="store", type=str, required=False,\
+                            help="Logging Level. Info or Debug. Debug is more verbose.",\
+                            choices=['INFO', 'DEBUG'])
+
+        # Exclude Filter
+        parser.add_argument('--excludeFilter', '-x', '-excludeFilters', '-E', '-X', metavar="[]", \
+                            action="append", required=False, nargs='+', help="Exclude filters",\
+                            choices=['U', 'B', 'V', 'R', 'I'])
+
+        # Force Flag
+        parser.add_argument('--force', default=False, action='store_true',\
+                            help="Force computations without darks or matching gains"
+                            )
+
+        # Skip Flat Flag
+        parser.add_argument('--no-flat', default=False, action='store_true',\
+                            help="Force reduction pipeline to not use flats"
+                            )
+
+        # Specify Version flag
+        parser.add_argument('--version', '-V', '-version', action='version', version='%(prog)s Version 0.0, 20231129')
+
+        ## REQUIRED ARGUMENTS
+        required = parser.add_argument_group('required arguments')
+
+        # Specify Src Data FITS directory
+        required.add_argument("--datadir",'-D', '-datadir', action="store", metavar='dir',type=str, required=True,\
+                            help="Directory containing all raw light frames",\
+                            )
+
+        # Specify Calibration  FITS directory
+        required.add_argument("--caldir",'-C', '-caldir', action="store", metavar='dir',type=str, required=True,\
+                            help="Directory containing all calibration frames",\
+                            )
+
+        # Specify output directory
+        required.add_argument("--outdir", '-O', '-outdir', metavar="dir", action="store", type=str, required=True,\
+                            help="Directory where log, analysis, and new FITS will be written.",\
+                            )
+
+        # Specify radius of aperture used to extract counts for magnitude estimation
+        required.add_argument("--radius", '-R', '-radius', metavar="int", action="store", type=int, required=True,\
+                            help="Integer number of pixels to extract around all source centroids for magnitude estimation. ~15 \nNot to be confused with subFrame size.",\
+                            )
+
+        # Specify side-length of subFrame
+        required.add_argument("--length", '-L', '-length', metavar="int", action="store", type=int, required=True,\
+                            help="Integer number of pixels for subframe extraction. ~50",\
+                            )
+        # Specify sigma used for Gaussian smoothing of frames
+        required.add_argument("--smoothing", "-S", "-smoothing", metavar="float", action="store", type=float, required=True,\
+                            help="Float value in range [0,inf) used for STD of Gaussian Smoothing Filter")
+
+        parser.parse_args(namespace=self)
+
     def __str__(self):
         return f"{self.FrameLists}"
 
@@ -167,4 +239,6 @@ class Frame:
     
     def __str__(self):
         return f"Type:{self.type}, Filter:{self.filter}, Gain:{self.gain}, IntTime:{self.intTime}"
-      
+
+
+
