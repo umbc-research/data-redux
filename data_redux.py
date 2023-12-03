@@ -1,4 +1,3 @@
-import argparse
 from sys import exit
 
 from matplotlib import pyplot as plt

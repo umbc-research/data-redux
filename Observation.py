@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 from glob import glob
+
+import argparse
 from tqdm import tqdm
 
 from astropy.io import fits
@@ -12,7 +14,7 @@ class Redux:
     def __init__(self):
         self.frameListDict = {}
         self.level = 'INFO'
-        self.FrameLists = []
+
         self.setProgramArguments()
 
     def makeLog(self):
