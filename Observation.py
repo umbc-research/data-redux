@@ -208,15 +208,36 @@ class FrameList(list):
                                  f"  Gain Match: {gainCond}\n"+\
                                  f"  Integration Time Match: {intTimeCond}"\
                                 )
-    def __repr__(self):
+    def __str__(self):
+        """Return string with basic information on FrameList object."""
         return f"{len(self)}x(Type:{self[0].type}, Filter:{self[0].filter}, Gain:{self[0].gain}, IntTime:{self[0].intTime})"
     
     def getFrameInfo(self):
+        """Return large string of frame information strings"""
         s = ""
         for frame in self:
-            s += frame.getInfo()
+            s += frame.getInfo() + "\n"
+        return s
 
 class Frame:
+    """The Frame Class defines a few class variables that are extracted
+    from the associated FITS HDU. These are:
+    data - the HDU Data unit as np.ndarray
+    type - lower-case string (light|flat|dark|bias|master)
+    filter - Upper-case string restrictded to single-letter Johnson Filter Set
+    gain - integer gain level reported by SharpCap
+    intTime - float exposure time used to collect frame
+
+    Further, the header portion of the associated FITS HDU is stored for 
+    later access/modification.
+
+    Finally, some statistics are calculated and stored along with each 
+    Frame object.
+
+    Importantly, calling an instance of a Frame object returns the data 
+    portion of the assocated FITS HDU.
+    """
+    
     def __init__(self, data, type, filter, gain, intTime, header):
         self.data = data
         self.type = type
@@ -232,14 +253,17 @@ class Frame:
         self.min = np.min(data)
 
     def __call__(self):
+        """Return the data portion of the FITS HDU (np.ndarray; d=2)"""
         return self.data
     
     def getInfo(self):
-        return f"{self.header['INSTRUME']} {self.header['CCD-TEMP']} {self.header['DATE-OBS']}\n"+\
+        """Return a more verbose string with more header information"""
+        return f"{self.header['INSTRUME']} T={self.header['CCD-TEMP']} Obs on {self.header['DATE-OBS']}\n"+\
             f"Min,Max:{self.min},{self.max} Mean,Median:{self.mean},{self.median} STD: {self.std}\n"+\
             str(self)
     
     def __str__(self):
+        """Return simple string with basic information for reduction"""
         return f"Type:{self.type}, Filter:{self.filter}, Gain:{self.gain}, IntTime:{self.intTime}"
 
 
