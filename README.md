@@ -1,6 +1,14 @@
 # data-redux
 Code base of routines and the entire reduction pipeline for UMBC Observatory equipment
 
+# TO RUN:
+python3 data_redux.py -D pg2213 -C calibration -O analysis -R 15 -L 25 -S 0 -x U B R I --save pg2213
+-D is data directory
+-C is calibration directory
+-O is output
+--save is base name of file
+-S is smoothing (set to 0 for now)
+
 # Pipeline
 See [Redux Pipeline](https://obs-web.rs.umbc.edu/doku.php?id=wiki:astronomy:observational_astronomy:data_reduction_telescope) on UMBC Observatory Wiki.
 This code base requires a directory of light frames, dark frames (and/or bias and thermal frames), and flat frames. Light frames and flat frames of multiple filters can be in the same directory.

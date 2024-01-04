@@ -1,33 +1,45 @@
 import logging
 from datetime import datetime
 from glob import glob
+import pprint
 
 import argparse
 from tqdm import tqdm
+
+from scipy.optimize import curve_fit
+
+
+#Photometry Utilities
+from photutils.detection import DAOStarFinder
 
 from astropy.io import fits
 
 import numpy as np
 
-class Redux:
+class Redux(dict):
 
     def __init__(self):
-        self.frameListDict = {}
-        self.level = 'INFO'
-
         self.setProgramArguments()
 
+    def __str__(self):
+        return pprint.pformat(vars(self), indent=1, depth=5)
+
     def makeLog(self):
-        LVL = logging.DEBUG if self.level == 'DEBUG' else logging.INFO
-        logging.basicConfig(filename='{}/redux_{}.log'.format(self.outdir, datetime.now().strftime("%Y%m%dT%H%M")),\
+        logging.basicConfig(filename='{}/redux_{}.log'.format(self.outdir, datetime.now().strftime("%Y%m%dT%H%M%S")),\
             encoding='utf-8', format='%(asctime)s %(levelname)s %(message)s', \
-            datefmt='%Y%m%dT%H%M%S',level=LVL)
+            datefmt='%Y%m%dT%H%M%S')
+        
         self.logger = logging.getLogger(__name__)
+        if self.level == 'DEBUG': 
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.INFO) 
+
         self.logger.info(f"Created logger object.")
         self.logger.debug(f"Logger made with debugging level set.")
 
     def findFITS(self):
-        self.logger.debug("Got to findFITS function in Redux Class")
+        self.logger.debug("Got to: findFITS function")
         
         #Assume all raw light and all calibration frames are in some directory (indir)
         fitsFileList = glob(f"{self.datadir}/**/*.fits", recursive=True) + glob(f"{self.caldir}/**/*.fits", recursive=True)
@@ -35,7 +47,7 @@ class Redux:
 
         #Go through each fits file and create a Frame object for each \
         #   and construct FrameList objects
-        for fitsFile in tqdm(fitsFileList):
+        for fitsFile in tqdm(fitsFileList, desc="Finding FITS"):
             with fits.open(fitsFile) as hdul:
                 hdu = hdul[0]
                 #Carve-out for bias and dark frames for which header does not report filter
@@ -61,28 +73,24 @@ class Redux:
                 #Create all of the dictionaries!
                 try:
                     #If frameList for filter is alr defined ...
-                    self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime].append(frame)
-                    self.FrameLists.append(self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime])
+                    self[frame.type][frame.filter][frame.gain][frame.intTime].append(frame)
                     #print(f"Added frame {str(frame)} to dictionary!")
                 except KeyError as e: #Couldn't find FrameList for that intTime, trying to add new FrameList for intTime
                     try:
-                        self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
-                        self.FrameLists.append(self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime])
+                        self[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, self)
                     except KeyError as e: #Couldn't find gain, trying to add gain to filter dict
                         try:
-                            self.frameListDict[frame.type][frame.filter] = {}
-                            self.frameListDict[frame.type][frame.filter][frame.gain] = {}
-                            self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
-                            self.FrameLists.append(self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime])
+                            self[frame.type][frame.filter] = {}
+                            self[frame.type][frame.filter][frame.gain] = {}
+                            self[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, self)
                         except KeyError as e: #Couldn't find intTime, trying to add intTime to type dict
                             try: 
-                                self.frameListDict[frame.type] = {}
-                                self.frameListDict[frame.type][frame.filter] = {}
-                                self.frameListDict[frame.type][frame.filter][frame.gain] = {}
-                                self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
-                                self.FrameLists.append(self.frameListDict[frame.type][frame.filter][frame.gain][frame.intTime])
+                                self[frame.type] = {}
+                                self[frame.type][frame.filter] = {}
+                                self[frame.type][frame.filter][frame.gain] = {}
+                                self[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, self)
                             except KeyError as e: #Couldn't find type dict, trying to add type dict
-                                print(e)         
+                                self.logger.exception(e)         
 
     def setProgramArguments(self):
         description = \
@@ -99,24 +107,36 @@ class Redux:
                             epilog='Submit github issue with any quesitons or concerns.')
 
         ## OPTIONAL ARGUMENTS
-        # Logging Level
-        parser.add_argument("--level", metavar="[]", action="store", type=str, required=False,\
-                            help="Logging Level. Info or Debug. Debug is more verbose.",\
-                            choices=['INFO', 'DEBUG'])
-
         # Exclude Filter
-        parser.add_argument('--excludeFilter', '-x', '-excludeFilters', '-E', '-X', metavar="[]", \
+        parser.add_argument('--excludeFilter', '-x', metavar="[]", \
                             action="append", required=False, nargs='+', help="Exclude filters",\
                             choices=['U', 'B', 'V', 'R', 'I'])
 
+        #Set logging level
+        parser.add_argument('--level', '-level', metavar="[]", \
+                            action="store", required=False, \
+                            help="Set Logging level to either INFO or DEBUG",\
+                            choices=['INFO', 'DEBUG'], default='INFO')
+
+        # Save Flag
+        parser.add_argument('--save', default="", action='store', metavar="title",\
+                            help="Save PNG of final light frame to analysis directory",\
+                            type=str
+                            )
+
         # Force Flag
-        parser.add_argument('--force', default=False, action='store_true',\
+        parser.add_argument('--force', default="False", action='store_true',\
                             help="Force computations without darks or matching gains"
                             )
 
         # Skip Flat Flag
         parser.add_argument('--no-flat', default=False, action='store_true',\
                             help="Force reduction pipeline to not use flats"
+                            )
+
+        # Skip Dark Flag
+        parser.add_argument('--no-dark', default=False, action='store_true',\
+                            help="Force reduction pipeline to not use darks"
                             )
 
         # Specify Version flag
@@ -155,34 +175,105 @@ class Redux:
 
         parser.parse_args(namespace=self)
 
-    def __str__(self):
-        return f"{self.FrameLists}"
+    def getDarks(self, frameList):
+        self.logger.debug("Got to: getDarks function")
+        #Get Darks with filter=None, gain=frameList.gain, intTime=frameList.intTime
+        #  If none, found raise exception
+        #  If gain is issue, alert and modify dark gain
+        #  If int time is issue, subtract biases out and scale thermal signal
+        # for now, assume all will work ...
+        gain = frameList[0].gain
+        intTime = frameList[0].intTime
+        try:
+            darks = self['dark'][None][gain][intTime]
+        except KeyError as e:
+            self.logger.exception(e)
+            self.logger.info("\tIssue with Dark for Flats")
+            darks = self['dark'][None][gain][intTime]
+            print("in getDarks w/ error")
+            print(darks)
+            try:
+                self['dark']
+            except KeyError as e:
+                self.logger.info("Unable to find darks. Exiting.")
+                exit()
+            try:
+                self['dark'][None]
+            except KeyError as e:
+                self.logger.info("Dark dictionary improperly formatted. Filter is not None. Exiting.")
+                exit()
+            try:
+                self['dark'][None][gain]
+            except KeyError as e:
+                #TODO: Provide override flag for just goofing around!
+                self.logger.info("Dark has different gain. Can proceed if --force flag used.")
+                if  self.force:
+                    self.logger.info("Functionality for proceeding with unequal gains not available yet.")
+                    exit()
+            try:
+                self['dark'][None][gain][intTime]
+            except KeyError as e:
+                #TODO: Provide override flag for just goofing around!
+                self.logger.info("Dark has different integration time. Can proceed to scale thermal signal if --force flag used.")
+                if  self.force:
+                    self.logger.info("Functionality providing thermal scaling not available yet")
+                    exit()
+                else:
+                    self.logger.info(f"No darks provided that with equal integration time for {frameList}.")
+                    self.logger.info(" You can force the computation to proceed by rerunning with --force flag.")
+                    self.logger.info(" The result will likely not be useful for estimating physical parameters.")
+        except Exception as e:
+            self.logger.exception(e)
+            exit()
+        return darks
 
 class FrameList(list):
-    def __init__(self, frame):
+    def __init__(self, frame, redux):
         self.append(frame)
+        self.redux = redux
 
-        self._darkFrameObj = 0
-        self._flatFrameObj = 1
+        self._darkFrame = 0
+        self._flatFrame = 1
         self._master = None
 
-    def setDarkFrameObj(self, darkFrameObj):
-        self._darkFrameList = darkFrameObj
+    def setDarkFrame(self, darkFrame):
+        self._darkFrame = darkFrame
+        self.__call__()
 
-    def setFlatFrameObj(self, flatFrameObj):
-        self._flatFrameObj = flatFrameObj
+    def setFlatFrame(self, flatFrame):
+        self._flatFrame = flatFrame
+        self.__call__()
 
     def __call__(self): #Calculate master frame
-        if self._darkFrameObj == 0:
+        darkCorr = False
+        flatCorr = False
+        #TODO: Remove logging from this function, wrap calling functions with logging
+        if self._darkFrame == 0:
+            self.redux.logger.debug(f"_darkFrame is 0, {self._darkFrame}")
+            self.redux.logger.debug("Deriving Master Dark")
             data = np.median([s() for s in self], axis=0)
+        else: # does not include functionality for mismatched dark/thermal frame integration times
+            self.redux.logger.debug(f"_darkFrame is non-0, {self._darkFrame}")
+            self.redux.logger.debug("Deriving Master Dark")
+            data = np.median([s()-self._darkFrame() for s in self], axis=0)
+            darkCorr = True
+
+        self.redux.logger.debug(f"Dark Done. Checking on Flats")
+        if self._flatFrame != 1:
+            self.redux.logger.debug(f"_flatFrame is not 1, {self._flatFrame}")
+            data /= (self._flatFrame() / self._flatFrame.max)
+            flatCorr = True
         else:
-            data = np.median(self - self._darkFrameObj(), axis=0)
+            self.redux.logger.debug(f"_flatFrame is 1 -- doing nothing., {self._darkFrame}")
 
-        if self._flatFrameObj != 1:
-            data /= (self._flatFrameObj() / self._flatFrameObj.max)
-        
+        self.redux.logger.debug(f"Creating Master Frame Obj is 0, {self._darkFrame}")
         self._master = Frame(data, 'master', self[0].filter, self[0].gain, self[0].intTime, self[0].header)
+        self._master.flatCorr = flatCorr
+        self._master.darkCorr = darkCorr
+        self.redux.logger.debug(f"Completing FrameList() call, {self}")
 
+    def getMaster(self):
+        self.redux.logger.debug(f"Retrieving Master, {self._master}")
         return self._master
     
     def append(self, frame):
@@ -208,9 +299,14 @@ class FrameList(list):
                                  f"  Gain Match: {gainCond}\n"+\
                                  f"  Integration Time Match: {intTimeCond}"\
                                 )
+    
     def __str__(self):
         """Return string with basic information on FrameList object."""
-        return f"{len(self)}x(Type:{self[0].type}, Filter:{self[0].filter}, Gain:{self[0].gain}, IntTime:{self[0].intTime})"
+        if self._master == None:
+            s = f"FrameList. {len(self)}x({self[0]})"
+        else:
+            s = f"FrameList. {len(self)}x({self._master})"
+        return s
     
     def getFrameInfo(self):
         """Return large string of frame information strings"""
@@ -218,6 +314,13 @@ class FrameList(list):
         for frame in self:
             s += frame.getInfo() + "\n"
         return s
+
+# class SubFrameList(list):
+#     def __init__(self, subFrame):
+#         self.append(subFrame)
+#         self.R2List = []
+#         self.loc = []
+#         self.
 
 class Frame:
     """The Frame Class defines a few class variables that are extracted
@@ -246,11 +349,19 @@ class Frame:
         self.intTime = intTime
         self.header = header
 
-        self.std = np.std(data)
-        self.mean = np.mean(data)
-        self.median = np.median(data)
-        self.max = np.max(data)
-        self.min = np.min(data)
+        if self.type == 'master':
+            self.subFrameList = None
+
+        filter = np.where((data<65000) & (data>0))
+
+        self.std = np.std(data[filter])
+        self.mean = np.mean(data[filter])
+        self.median = np.median(data[filter])
+        self.max = np.max(data[filter])
+        self.min = np.min(data[filter])
+
+        self.darkCorr = False
+        self.flatCorr = False
 
     def __call__(self):
         """Return the data portion of the FITS HDU (np.ndarray; d=2)"""
@@ -264,7 +375,54 @@ class Frame:
     
     def __str__(self):
         """Return simple string with basic information for reduction"""
-        return f"Type:{self.type}, Filter:{self.filter}, Gain:{self.gain}, IntTime:{self.intTime}"
+        s = f"Frame. Type:{self.type}, Filter:{self.filter}, Gain:{self.gain}, IntTime:{self.intTime}s"
+        if self.darkCorr:
+            s += ", Dark Applied"
+        else:
+            s += ", No Dark Applied" 
+        if self.flatCorr:
+            s += ", Flat Applied"
+        else:
+            s += ", No Flat Applied"
+        return s
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    @staticmethod
+    def fitGaussian1D(radialData, p0, pixelLocs):
+        # p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
+        params, _ = curve_fit(Frame.gaussian1D, pixelLocs, radialData, p0)
 
+        #Calculate coefficient of determination
+        res = radialData - Frame.gaussian1D(pixelLocs, *params)
+        sumSqrs_res = np.sum(res*res)
+        totSumSqrs = np.sum((radialData-np.mean(radialData))**2)
+        R2 = 1.0 - (sumSqrs_res / totSumSqrs)
 
+        return params, R2
+    
+    @staticmethod
+    def gaussian1D(x, mu, sigma, amplitude, offset):
+        #Model function as gaussian with amplitude A and offset G
+        return amplitude * np.exp( -((x-mu)/sigma)**2/2 ) + offset
+
+    @staticmethod
+    def extractRadialData(subFrame, xC, yC):
+        #Get matrix of integer indices associated with subFrame
+        y, x = np.indices((subFrame.shape))
+
+        #Generate matrix of radius values
+        r = np.sqrt((x - xC)**2 + (y - yC)**2)
+
+        #Force integer values (np.sqrt gives floats)
+        r = r.astype(int)
+
+        #Generate a histogram of radius bin, each weighed by corresponding counts
+        weightedRadiusHistogram = np.bincount(r.ravel(), weights=subFrame.ravel())
+        unweightedRadiusHistogram = np.bincount(r.ravel())
+
+        #Get average for each radius bin
+        averageCountsPerRadiusBin = weightedRadiusHistogram / unweightedRadiusHistogram
+        return averageCountsPerRadiusBin
 
