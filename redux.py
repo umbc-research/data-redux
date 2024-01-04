@@ -49,7 +49,6 @@ try:
 
     ## Get Dark Frames
     logger.info(f"Gathering Dark Frames for each integration time")
-
     vars = redux_funcs.getDarkFrames(config, vars)
 
     ## Get Bias Frames
@@ -80,21 +79,30 @@ logger.info(f"Bias Frame Mean: {mean}")
 logger.info(f"Bias Frame Median: {median}")
 logger.info(f"Bias Frame STD: {std}")
 logger.info(f"Bias Frame Max: {max}")
-#redux_funcs.plotFrame(vars['masterBias'], f"Bias Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+redux_funcs.plotFrame(vars['masterBias'], f"Bias Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", "bias")
 
 ## Generate Master Darks
 for intTime in vars['intTimes']:
     logger.info(f"Working on master dark frame for integration time {intTime}.")
-    vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
+    try:
+        vars['masterDark'][intTime] = redux_funcs.generateMasterDark(config, vars, intTime)
+    except Exception as e:
+        logger.warning(e)
+        logger.info("Removing this intTime from pipeline.")
+        vars['intTimes'].remove(intTime)
 
 ### Log Dark Frame Specs
 for intTime in vars['intTimes']:
-    mean, median, std, max = redux_funcs.frameSpecs(vars['masterDark'][intTime])
-    logger.info(f"Dark Frame [{intTime}s] Mean: {mean}")
-    logger.info(f"Dark Frame [{intTime}s] Median: {median}")
-    logger.info(f"Dark Frame [{intTime}s] STD: {std}")
-    logger.info(f"Dark Frame [{intTime}s] Max: {max}")
-    #redux_funcs.plotFrame(vars['masterDark'][intTime], f"{intTime:0.2f}s Dark Frame  \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+    try:
+        mean, median, std, max = redux_funcs.frameSpecs(vars['masterDark'][intTime])
+        logger.info(f"Dark Frame [{intTime}s] Mean: {mean}")
+        logger.info(f"Dark Frame [{intTime}s] Median: {median}")
+        logger.info(f"Dark Frame [{intTime}s] STD: {std}")
+        logger.info(f"Dark Frame [{intTime}s] Max: {max}")
+        redux_funcs.plotFrame(vars['masterDark'][intTime], f"{intTime:0.2f}s Dark Frame  \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", f"dark_{'-'.join(str(intTime).split('.'))}")
+    except KeyError as e:
+        logger.warning(e)
+        logger.info("")
 
 ## Generate Master Flat
 try:
@@ -110,8 +118,7 @@ logger.info(f"Flat Frame Mean: {mean}")
 logger.info(f"Flat Frame Median: {median}")
 logger.info(f"Flat Frame STD: {std}")
 logger.info(f"Flat Frame Max: {max}")
-redux_funcs.plotFrame(vars['masterFlat']/vars['flatConstant'], f"Flat Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
-
+redux_funcs.plotFrame(vars['masterFlat']/vars['flatConstant'], f"Flat Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", f"flat_{'-'.join(str(vars['flatIntTime']).split('.'))}_{vars['filters'][0]}")
 
 # Generate Data Frame
 ## Apply Calibration Frames
@@ -128,10 +135,9 @@ logger.info(f"Data Frame Mean: {mean}")
 logger.info(f"Data Frame Median: {median}")
 logger.info(f"Data Frame STD: {std}")
 logger.info(f"Data Frame Max: {max}")
-redux_funcs.plotFrame(vars['dataFrame'], f"Data Frame \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}")
+redux_funcs.plotFrame(vars['dataFrame'], f"Data Frame with Background \nMean:{mean:0.2f}; Median:{median:0.2f}; STD:{std:0.2f}; Max:{max:0.2f}", f"data_{'-'.join(str(vars['lightIntTime']).split('.'))}_{vars['filters'][0]}")
 
 
-# Make plots of calibration frames and data frames
 
 # Estimate Instrument Magnitude
 ## Extract Sources, SubFrames, Radial Profile Parameters
@@ -143,6 +149,17 @@ logger.info(f"Estimating Instrument Magnitudes")
 vars = redux_funcs.getMagnitudes(config, vars)
 
 # Plots
+redux_funcs.plotFinder(config, vars, f"data_finder_{'-'.join(str(vars['lightIntTime']).split('.'))}_{vars['filters'][0]}")
 
+for sourceID in vars['subFrames']:
+    subFrame, loc, radialData, params, R2, instMag, countFlux = vars['subFrames'][sourceID]
+    redux_funcs.plotSubFrame(config, vars, sourceID)
+    logger.info(f"PhotUtils Source {sourceID} at (i,j) {loc[0]},{loc[1]}\n"+\
+                f"  Model Fit: Center {params[0]}; STD {params[1]} pix; Amp {params[2]} counts; Offset {params[3]} counts\n"+\
+                f"  Model Fit Coefficient of Determination (R^2) {R2}\n"+\
+                f"  Filter {vars['filters'][0]}; instrument magnitude {instMag:0.6f}; countFlux {countFlux:0.2f}")
+
+for key in vars:
+    logger.info(f"{key}: {vars[key]}")
 
 logger.info(f"Fin.")

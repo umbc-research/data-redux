@@ -1,6 +1,14 @@
 # data-redux
 Code base of routines and the entire reduction pipeline for UMBC Observatory equipment
 
+# TO RUN:
+python3 data_redux.py -D pg2213 -C calibration -O analysis -R 15 -L 25 -S 0 -x U B R I --save pg2213
+-D is data directory
+-C is calibration directory
+-O is output
+--save is base name of file
+-S is smoothing (set to 0 for now)
+
 # Pipeline
 See [Redux Pipeline](https://obs-web.rs.umbc.edu/doku.php?id=wiki:astronomy:observational_astronomy:data_reduction_telescope) on UMBC Observatory Wiki.
 This code base requires a directory of light frames, dark frames (and/or bias and thermal frames), and flat frames. Light frames and flat frames of multiple filters can be in the same directory.
@@ -58,8 +66,100 @@ $$m_{inst} = -2.5\log{\Biggl[\sum_i\sum_j (I_{ij}t)/t\Biggr]}$$
 $$\forall~i,j\|\sqrt{(i-i_c)^2-(j-j_c)^2} < R$$
 
 # How to Run
-  - Edit .env file to enter your own file locations
-  - Run `python redux.py` at the command line
+
+
+## Example Run
+```bash
+tree -d
+.
+├── analysis
+├── calibration
+│   ├── bias
+│   │   └── 22_16_40
+│   ├── darks
+│   │   ├── darks_08
+│   │   │   └── 22_14_40
+│   │   ├── darks_117
+│   │   │   └── 21_41_38
+│   │   ├── darks_140
+│   │   │   └── 21_46_36
+│   │   ├── darks_147
+│   │   │   └── 21_55_57
+│   │   ├── darks_150
+│   │   │   └── 22_09_11
+│   │   ├── darks_20
+│   │   │   └── 22_08_08
+│   │   ├── darks_50
+│   │   │   └── 22_01_21
+│   │   ├── darks_56
+│   │   │   └── 22_05_52
+│   │   └── darks_63
+│   │       └── 22_03_13
+│   └── flats
+│       ├── flat_b_
+│       │   └── 21_09_24
+│       ├── flat_i_
+│       │   ├── 21_13_47
+│       │   └── 21_25_01
+│       ├── flat_r_
+│       │   └── 21_11_54
+│       ├── flat_u_
+│       │   └── 21_29_41
+│       └── flat_v_
+│           └── 21_11_10
+├── ngc7790
+│   ├── ngc7790_b_011_agon
+│   │   └── 19_10_48
+│   ├── ngc7790_i_011_agon
+│   │   └── 19_25_27
+│   ├── ngc7790_r_011_agon
+│   │   └── 19_19_07
+│   ├── ngc7790_u_011_agon
+│   │   └── 19_03_40
+│   └── ngc7790_v_011_agon
+│       └── 19_15_11
+├── pg2213
+│   ├── pg2213_b_011_agon
+│   │   └── 20_29_42
+│   ├── pg2213_i_011_agon
+│   │   └── 20_39_29
+│   ├── pg2213_r_011_agon
+│   │   └── 20_36_15
+│   ├── pg2213_u_011_agon
+│   │   └── 20_21_37
+│   └── pg2213_v_011_agon
+│       └── 20_32_41
+└── sa20
+    ├── sa20_b_011_agon
+    │   └── 19_58_55
+    ├── sa20_i_011_agon
+    │   └── 20_13_16
+    ├── sa20_r_011_agon
+    │   └── 20_09_15
+    ├── sa20_u_011_agon
+    │   └── 19_50_38
+    └── sa20_v_011_agon
+        └── 20_03_44
+
+[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+ls
+Observation.py README.md      analysis       calibration    data_redux.py  ngc7790        pg2213         redux.py       redux_funcs.py sa20
+[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+
+[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+python3 data_redux.py -r 15 -o analysis -d pg2213 -c calibration -l 50 -S 0 --level DEBUG --force -x U B R I --no-flat 
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 411/411 [00:04<00:00, 102.25it/s]
+Done sorting files
+
+Starting work on new master light frame.
+  Working with light filter: V
+  Working with light gain: 150
+  Working with light integration time: 5
+    Got lights: 25x(Type:light, Filter:V, Gain:150, IntTime:5)
+    Got darks for lights: 20x(Type:dark, Filter:None, Gain:150, IntTime:5)
+[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+```
+
 
 # Requirements
 UNSURE. But this is the output of my `pip3 list`. I'll refine this later!
