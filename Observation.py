@@ -245,6 +245,7 @@ class FrameList(list):
         self.__call__()
 
     def __call__(self): #Calculate master frame
+        #This is where all of the master frame accumulation is done 
         darkCorr = False
         flatCorr = False
         #TODO: Remove logging from this function, wrap calling functions with logging
@@ -314,13 +315,6 @@ class FrameList(list):
         for frame in self:
             s += frame.getInfo() + "\n"
         return s
-
-# class SubFrameList(list):
-#     def __init__(self, subFrame):
-#         self.append(subFrame)
-#         self.R2List = []
-#         self.loc = []
-#         self.
 
 class Frame:
     """The Frame Class defines a few class variables that are extracted
