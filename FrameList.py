@@ -1,5 +1,12 @@
-from Frame import Frame
+##########################################
+#####  Imports
+##########################################
+
+# Installed Imports
 import numpy as np
+
+#Locally authored classes
+from Frame import Frame
 
 class FrameList(list):
     def __init__(self, frame, redux):
