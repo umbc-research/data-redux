@@ -9,13 +9,11 @@ import numpy as np
 from Frame import Frame
 
 class FrameList(list):
-    def __init__(self, frame, redux):
+    def __init__(self, frame):
         self.append(frame)
-        self.redux = redux
-
-        self._darkFrame = None
-        self._flatFrame = None
         self._master = None
+        self._masterFlat = None
+        self._masterDark = None
 
     def setDarkFrame(self, darkFrame):
         self._darkFrame = darkFrame
@@ -23,8 +21,10 @@ class FrameList(list):
     def setFlatFrame(self, flatFrame):
         self._flatFrame = flatFrame
 
+    def setMaster(self, frame):
+        self._master = frame
+
     def getMaster(self):
-        self.redux.logger.debug(f"Retrieving Master, {self._master}")
         return self._master
     
     def append(self, frame):
