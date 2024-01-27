@@ -7,8 +7,11 @@ from matplotlib.patches import Circle
 #Yet to be implemented
 #from scipy.ndimage import gaussian_filter
 
-#Authored packages
-from Observation import Redux, Frame
+from Redux import Redux
+from Frame import Frame
+
+from photutils.detection import DAOStarFinder
+
 
 if __name__ == "__main__":
     redux = Redux()
