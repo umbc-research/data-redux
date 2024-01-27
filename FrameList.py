@@ -19,11 +19,10 @@ class FrameList(list):
 
     def setDarkFrame(self, darkFrame):
         self._darkFrame = darkFrame
-        self.__call__()
 
     def setFlatFrame(self, flatFrame):
         self._flatFrame = flatFrame
-        self.__call__()
+
 
     def __call__(self): #Calculate master frame
         #This is where all of the master frame accumulation is done 
