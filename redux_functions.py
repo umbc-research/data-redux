@@ -1,6 +1,5 @@
-import glob
-import tqdm
-import astropy
+import glob, tqdm, astropy
+import numpy as np
 
 import argparse
 
@@ -99,7 +98,6 @@ def setProgramArguments(params):
 
     parser.parse_args(namespace=params)
 
-
 def findFITS(params):
     fitsFiles = dict()
     params.logger.debug("Got to: findFITS function")
@@ -140,23 +138,21 @@ def findFITS(params):
                 #print(f"Added frame {str(frame)} to dictionary!")
             except KeyError as e: #Couldn't find FrameList for that intTime, trying to add new FrameList for intTime
                 try:
-                    fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, params)
+                    fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
                 except KeyError as e: #Couldn't find gain, trying to add gain to filter dict
                     try:
                         fitsFiles[frame.type][frame.filter] = {}
                         fitsFiles[frame.type][frame.filter][frame.gain] = {}
-                        fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, params)
+                        fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
                     except KeyError as e: #Couldn't find intTime, trying to add intTime to type dict
                         try: 
                             fitsFiles[frame.type] = {}
                             fitsFiles[frame.type][frame.filter] = {}
                             fitsFiles[frame.type][frame.filter][frame.gain] = {}
-                            fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame, params)
+                            fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime] = FrameList(frame)
                         except KeyError as e: #Couldn't find type dict, trying to add type dict
                             params.logger.exception(e)
     return fitsFiles
-
-
 
 def getDarks(params, frameList):
         params.logger.debug("Got to: getDarks function")
@@ -211,3 +207,6 @@ def getDarks(params, frameList):
             params.logger.exception(e)
             exit()
         return darks
+
+def accumulate(frameList):
+    return np.median(frameList)
