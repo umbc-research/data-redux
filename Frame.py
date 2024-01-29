@@ -4,7 +4,6 @@
 
 # Installed Imports
 import numpy as np
-from scipy.optimize import curve_fit
 
 
 class Frame:
@@ -25,7 +24,7 @@ class Frame:
     Importantly, calling an instance of a Frame object returns the data 
     portion of the assocated FITS HDU.
     """
-    
+
     def __init__(self, data, type, filter, gain, intTime, header):
         self.data = data
         self.type = type
@@ -37,13 +36,13 @@ class Frame:
         if self.type == 'master':
             self.subFrameList = None
 
-        filter = np.where((data<65000) & (data>0))
+        histFilter = np.where((self.data<65000) & (self.data>0))
 
-        self.std = np.std(data[filter])
-        self.mean = np.mean(data[filter])
-        self.median = np.median(data[filter])
-        self.max = np.max(data[filter])
-        self.min = np.min(data[filter])
+        self.std = np.std(self.data[histFilter])
+        self.mean = np.mean(self.data[histFilter])
+        self.median = np.median(self.data[histFilter])
+        self.max = np.max(self.data[histFilter])
+        self.min = np.min(self.data[histFilter])
 
         self.darkCorr = False
         self.flatCorr = False
@@ -73,41 +72,18 @@ class Frame:
     
     def __repr__(self):
         return self.__str__()
+
+    def __add__(self, obj):
+        return self.data + obj.data
+
+    def __sub__(self, obj):
+        return self.data - obj.data
+
+    def __mul__(self, obj):
+        return self.data * obj.data
     
-    @staticmethod
-    def fitGaussian1D(radialData, p0, pixelLocs):
-        # p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
-        params, _ = curve_fit(Frame.gaussian1D, pixelLocs, radialData, p0)
-
-        #Calculate coefficient of determination
-        res = radialData - Frame.gaussian1D(pixelLocs, *params)
-        sumSqrs_res = np.sum(res*res)
-        totSumSqrs = np.sum((radialData-np.mean(radialData))**2)
-        R2 = 1.0 - (sumSqrs_res / totSumSqrs)
-
-        return params, R2
+    def __trudiv__(self, obj):
+        return self.data / obj.data
     
-    @staticmethod
-    def gaussian1D(x, mu, sigma, amplitude, offset):
-        #Model function as gaussian with amplitude A and offset G
-        return amplitude * np.exp( -((x-mu)/sigma)**2/2 ) + offset
 
-    @staticmethod
-    def extractRadialData(subFrame, xC, yC):
-        #Get matrix of integer indices associated with subFrame
-        y, x = np.indices((subFrame.shape))
-
-        #Generate matrix of radius values
-        r = np.sqrt((x - xC)**2 + (y - yC)**2)
-
-        #Force integer values (np.sqrt gives floats)
-        r = r.astype(int)
-
-        #Generate a histogram of radius bin, each weighed by corresponding counts
-        weightedRadiusHistogram = np.bincount(r.ravel(), weights=subFrame.ravel())
-        unweightedRadiusHistogram = np.bincount(r.ravel())
-
-        #Get average for each radius bin
-        averageCountsPerRadiusBin = weightedRadiusHistogram / unweightedRadiusHistogram
-        return averageCountsPerRadiusBin
 

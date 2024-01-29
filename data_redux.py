@@ -150,21 +150,19 @@ try:
                 params.logger.info(f"\t\t\tGenerated master dark for dark correcting flats {masterDarkForFlatFrame}")
 
                 # For the flat FrameList, set the appropriate master dark frame
-                flats.setDarkFrame( masterDarkForFlat )
+                flats.setDarkFrame( masterDarkForFlatFrame )
 
                 ### ACCUMULATE Flats ### 
-                masterFlat = redux_functions.accumulate( [f-masterDarkForFlatFrame for f in flats] )
+                masterFlat = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats] )
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
-                                intTime=darksForFlats[0].intTime, header=flats[0].header)
+                                intTime=flats[0].intTime, header=flats[0].header)
                 params.logger.info(f"\t\t\tSet master flat to {masterFlatFrame}")
-                params.logger.info(f"\t\t\t{flats}")
                 flats.setMaster( masterFlatFrame )
 
                 lights.setFlatFrame(masterFlatFrame)
                 ######   Work on applying darks to light frames   ######
                 params.logger.info(f"\tDarks for Light Frames")
-
 
                 ##############################################
                 #####  Calibrate Light Frames
@@ -174,27 +172,25 @@ try:
                 # This finds all of the dark frames for this FrameList of light frames
                 darksForLight = redux_functions.getDarks(params, lights)
                 params.logger.info(f"\t\tFound darks for dark correcting light frames")
+                masterDarkForLights = redux_functions.accumulate( darksForLight )
+                masterDarkForLightsFrame = Frame( masterDarkForLights , \
+                                type='master', filter=darksForLight[0].filter, gain=darksForLight[0].gain, \
+                                intTime=darksForLight[0].intTime, header=darksForLight[0].header)
+                params.logger.info(f"\t\t\tSet master dark for lights to {masterDarkForLightsFrame}")
+                darksForLight.setMaster( masterDarkForLightsFrame )
 
-                # This call to the FrameList obj stacks the darks
-                darksForLight()
-                masterDarkForLight = darksForLight.getMaster()
                 params.logger.info(f"\t\tGenerated master dark for dark correcting light frames")
-                lights.setDarkFrame(masterDarkForLight)
-                lights()
-                params.logger.info(f"\t\tSet flats Dark Frame to {masterDarkForLight}")
-                
-                params.logger.info(f"Lights: {lights}")
 
+                lights.setDarkFrame(masterDarkForLightsFrame)
+                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/masterFlatFrame.data for l in lights] )
+                masterLight /= np.max(masterFlatFrame.data)
 
+                masterLightFrame = Frame( masterLight , \
+                                type='master', filter=lights[0].filter, gain=lights[0].gain, \
+                                intTime=lights[0].intTime, header=lights[0].header)
+                params.logger.info(f"\t\t\tSet master light to {masterLightFrame}")
+                lights.setMaster( masterLightFrame )
 
-
-                ##############################################
-                #####  Generate Master Light Frame
-                ##############################################
-
-                # Make the call to lights frameList to perform reduction
-                finalLight = lights.getMaster()
-                params.logger.info(f"Master Light: {finalLight}")
 
                 # plt.figure(figsize=(12,8))
                 # plt.imshow(finalLight.data, \
@@ -217,6 +213,8 @@ try:
     ##############################################
     #####  Begin Source Extraction
     ##############################################
+                
+    finalLight = masterLightFrame
     starFind = DAOStarFinder(threshold=finalLight.median, fwhm=20.0, \
                             sky=finalLight.mean, exclude_border=True, \
                             brightest=10, peakmax=finalLight.max
@@ -236,13 +234,13 @@ try:
         xc, yc = source[2], source[1]
         loc = (xc, yc)
         subFrame = finalLight.data[int(xc-params.length):int(xc+params.length),int(yc-params.length):int(yc+params.length)]
-        radial_data_raw = Frame.extractRadialData(subFrame, xC=params.length, yC=params.length)[:params.length]
+        radial_data_raw = redux_functions.extractRadialData(subFrame, xC=params.length, yC=params.length)[:params.length]
         radialData = np.concatenate((radial_data_raw[::-1], radial_data_raw))
 
         p0 = [params.length, 2, finalLight.max, finalLight.mean]
         pixelLocs = np.linspace(0, params.length*2, params.length*2).astype(int)
 
-        fitparams, R2 = Frame.fitGaussian1D(radialData, p0, pixelLocs)
+        fitparams, R2 = redux_functions.fitGaussian1D(radialData, p0, pixelLocs)
 
         background = fitparams[-1]
         print(f"background: {background}")
@@ -269,7 +267,7 @@ try:
 
         plt.subplot(1,2,2)
         plt.plot(pixelLocs, radialData-background, 'b.')
-        plt.plot(pixelLocs, Frame.gaussian1D(pixelLocs, *fitparams[:-1], 0), 'r')
+        plt.plot(pixelLocs, redux_functions.gaussian1D(pixelLocs, *fitparams[:-1], 0), 'r')
         plt.grid(1)
 
         plt.axvline(x = fitparams[0]-params.radius, color = 'm', linestyle="--")
