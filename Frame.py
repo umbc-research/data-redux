@@ -5,7 +5,6 @@
 # Installed Imports
 import numpy as np
 
-
 class Frame:
     """The Frame Class defines a few class variables that are extracted
     from the associated FITS HDU. These are:

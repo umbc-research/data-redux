@@ -42,9 +42,6 @@ class params:
 
 
 
-
-
-
 ##############################################
 #####  Set Arguments and Logging
 ##############################################
@@ -90,7 +87,6 @@ params.logger.info(params)
 params.fitsFiles = redux_functions.findFITS(params)
 params.logger.info("Done finding and sorting files")
 
-
 try:
     ##############################################
     #####  Main Calibration Loop
@@ -100,7 +96,7 @@ try:
     # Note: fitsFiles Dict structure: fitsFiles[frame.type][frame.filter][frame.gain][frame.intTime]
     for lightFilter in tqdm(params.fitsFiles['light'].keys(), desc="Calibrating Light Frames"):
         params.logger.info("Starting work on new master light frame")
-        params.logger.info(f"\tFilter {lightFilter}")
+        params.logger.info(f"\tFilter: {lightFilter}")
 
         ######   Loop through each gain setting   ###### 
         for lightGain in params.fitsFiles['light'][lightFilter].keys():
@@ -108,16 +104,17 @@ try:
 
             ######   Loop through each integration time   ###### 
             for lightIntTime in params.fitsFiles['light'][lightFilter][lightGain]:
-                params.logger.info(f"\tIntegration time: {lightIntTime}")
+                params.logger.info(f"\tIntegration time: {lightIntTime}s")
 
                 lights = params.fitsFiles['light'][lightFilter][lightGain][lightIntTime]
-                params.logger.info(f"\tIdentified light frameList {lights}")
+                params.logger.info(f"\tIdentified light frameList\n\t {lights}")
 
-                params.logger.info(f"\tNow working on Flats")
+
 
                 ##############################################
                 #####  Calibrate Flat Frames
                 ##############################################
+                params.logger.info(f"\tNow generating Flat Master Frame")
                 params.logger.info(f"\t\tLooking up flats taken in filter {lightFilter}")
                 #TODO: Wrap this in try/except in cases where filter doesn't match -- fail in this case
                 #TODO: Wrap this in tr/except in cases where gain doesn't match -- alert in this case and modify flat Gain
@@ -130,14 +127,13 @@ try:
                 #TODO: This should not fail if the above didn't exception-out, modify for flat-gain mismatches
                 #  This is because we use the light gain to sort the flats earlier on when we sort the FITS by type
                 flats =  params.fitsFiles['flat'][lightFilter][flatGain][flatIntTime]
-                params.logger.info(f"\t\tGot flats for filter {lightFilter}: {flats}")
+                params.logger.info(f"\t\tGot flats for filter {lightFilter}\n\t\t\t {flats}")
                     
-                params.logger.info(f"\t\tNow working to find the Darks for the Flats")
-                params.logger.info(f"\t\t\tLooking up darks to dark correct flats")
+                params.logger.info(f"\t\tLooking up darks for flat calibration")
 
                 # This gets all of the dark frames that should apply to this FrameList of flats
                 darksForFlats = redux_functions.getDarks(params, flats)
-                params.logger.info(f"\t\t\tFound darks for dark-correcting flats")
+                params.logger.info(f"\t\t\tFound darks for flat calibration")
                 params.logger.info(f"\t\t\t{darksForFlats}")
 
                 ### ACCUMULATE DARKS ### 
@@ -147,7 +143,7 @@ try:
                                 intTime=darksForFlats[0].intTime, header=darksForFlats[0].header)
                 darksForFlats.setMaster( masterDarkForFlatFrame )
 
-                params.logger.info(f"\t\t\tGenerated master dark for dark correcting flats {masterDarkForFlatFrame}")
+                params.logger.info(f"\t\t\tGenerated Master Dark for Flat Calibration\n\t\t\t\t {masterDarkForFlatFrame}")
 
                 # For the flat FrameList, set the appropriate master dark frame
                 flats.setDarkFrame( masterDarkForFlatFrame )
@@ -157,17 +153,17 @@ try:
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
                                 intTime=flats[0].intTime, header=flats[0].header)
-                params.logger.info(f"\t\t\tSet master flat to {masterFlatFrame}")
+                params.logger.info(f"\t\t\t Generated master flat\n\t\t\t\t {masterFlatFrame}")
                 flats.setMaster( masterFlatFrame )
 
                 lights.setFlatFrame(masterFlatFrame)
                 ######   Work on applying darks to light frames   ######
-                params.logger.info(f"\tDarks for Light Frames")
+                params.logger.info(f"\tWorking to generate Master Dark for light calibration")
 
                 ##############################################
                 #####  Calibrate Light Frames
                 ##############################################
-                params.logger.info(f"\t\tLooking up darks to dark correct light frames")
+                params.logger.info(f"\t\tLooking up darks for light frame calibration")
 
                 # This finds all of the dark frames for this FrameList of light frames
                 darksForLight = redux_functions.getDarks(params, lights)
@@ -179,11 +175,11 @@ try:
                 params.logger.info(f"\t\t\tSet master dark for lights to {masterDarkForLightsFrame}")
                 darksForLight.setMaster( masterDarkForLightsFrame )
 
-                params.logger.info(f"\t\tGenerated master dark for dark correcting light frames")
+                params.logger.info(f"\t\tGenerated master dark for light frame calibration")
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
-                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/masterFlatFrame.data for l in lights] )
-                masterLight /= np.max(masterFlatFrame.data)
+                flat_C = np.max(masterFlatFrame.data)
+                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data/flat_C) for l in lights] )
 
                 masterLightFrame = Frame( masterLight , \
                                 type='master', filter=lights[0].filter, gain=lights[0].gain, \
@@ -244,15 +240,15 @@ try:
 
         background = fitparams[-1]
         print(f"background: {background}")
-        counts = np.sum(subFrame - background, where=dist<params.radius)
-        countsw = np.sum(subFrame, where=dist<params.radius)
-        print(f"counts w/ background: {countsw}")
+        #counts = np.sum(subFrame - background, where=dist<params.radius)
+        counts = np.sum(subFrame, where=dist<params.radius)
+        #print(f"counts w/ background: {countsw}")
         print(f"counts w/o background: {counts}")
         nPix = np.sum(ones, where=dist<params.radius)
         print(f"nPix: {nPix}")
         countFlux = ((counts/nPix) )/finalLight.intTime
         print(f"count flux: {countFlux}")
-        instMag = 0#-2.5*np.log10(countFlux)
+        instMag = -2.5*np.log10(countFlux)
 
         plt.figure(2)
         plt.subplot(1,2,1)
