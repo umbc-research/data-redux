@@ -1,6 +1,8 @@
 import glob, tqdm, astropy
 import numpy as np
 
+from scipy.optimize import curve_fit
+
 import argparse
 
 from Frame import Frame
@@ -126,8 +128,8 @@ def findFITS(params):
                 #print(f"Added frame {str(frame)}")
             except Exception as e: #We expect bias and dark frames to fail to resolve the 'FILTER' key in the header
                 #print(e)
-                frame = Frame(hdu.data, hdu.header['FRAMETYP'].lower(), None, \
-                                hdu.header['GAIN'], hdu.header['EXPTIME'], hdu.header
+                frame = Frame(hdu.data, type=hdu.header['FRAMETYP'].lower(), filter=None, \
+                                gain=hdu.header['GAIN'], intTime=hdu.header['EXPTIME'], header=hdu.header
                                 )
                 #print(f"Added frame {str(frame)}")
                 
@@ -208,5 +210,40 @@ def getDarks(params, frameList):
             exit()
         return darks
 
+def fitGaussian1D(radialData, p0, pixelLocs):
+    # p0 behaves by taking a best guess at params (mu, sigma, amplitude, offset)
+    params, _ = curve_fit(gaussian1D, pixelLocs, radialData, p0)
+
+    #Calculate coefficient of determination
+    res = radialData - gaussian1D(pixelLocs, *params)
+    sumSqrs_res = np.sum(res*res)
+    totSumSqrs = np.sum((radialData-np.mean(radialData))**2)
+    R2 = 1.0 - (sumSqrs_res / totSumSqrs)
+
+    return params, R2
+
+def gaussian1D(x, mu, sigma, amplitude, offset):
+    #Model function as gaussian with amplitude A and offset G
+    return amplitude * np.exp( -((x-mu)/sigma)**2/2 ) + offset
+
+def extractRadialData(subFrame, xC, yC):
+    #Get matrix of integer indices associated with subFrame
+    y, x = np.indices((subFrame.shape))
+
+    #Generate matrix of radius values
+    r = np.sqrt((x - xC)**2 + (y - yC)**2)
+
+    #Force integer values (np.sqrt gives floats)
+    r = r.astype(int)
+
+    #Generate a histogram of radius bin, each weighed by corresponding counts
+    weightedRadiusHistogram = np.bincount(r.ravel(), weights=subFrame.ravel())
+    unweightedRadiusHistogram = np.bincount(r.ravel())
+
+    #Get average for each radius bin
+    averageCountsPerRadiusBin = weightedRadiusHistogram / unweightedRadiusHistogram
+    return averageCountsPerRadiusBin
+
 def accumulate(frameList):
-    return np.median(frameList)
+    return np.median( [f.data for f in frameList], axis=0 )
+
