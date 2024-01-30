@@ -35,6 +35,7 @@ class Frame:
         if self.type == 'master':
             self.subFrameList = None
 
+        # TODO: Repalce this histFilter with a bad-pixel filter
         histFilter = np.where((self.data<65000) & (self.data>0))
 
         self.std = np.std(self.data[histFilter])

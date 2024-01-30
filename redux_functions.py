@@ -9,7 +9,6 @@ from Frame import Frame
 from FrameList import FrameList
 
 
-
 def setProgramArguments(params):
     """
     This function takes care of setting the program arguments that are read-in at runtime.
