@@ -60,7 +60,7 @@ logging.basicConfig(filename='{}/redux_{}.log'.format(params.outdir, datetime.da
 params.logger = logging.getLogger(__name__)
 
 # Set logging debug level (info isn't as verbose as debug)
-if params.level == 'DEBUG': 
+if params.level == 'DEBUG':
     params.logger.setLevel(logging.DEBUG)
 else:
     params.logger.setLevel(logging.INFO) 
