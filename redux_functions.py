@@ -165,15 +165,13 @@ def getDarks(params, frameList):
         gain = frameList[0].gain
         intTime = frameList[0].intTime
         try:
-            print(gain, type(gain))
-            print(intTime, type(intTime))
+
             darks = params.fitsFiles['dark'][None][gain][intTime]
         except KeyError as e:
             params.logger.exception(e)
             params.logger.info("\tIssue with Dark for Flats")
             darks = params.fitsFiles['dark'][None][gain][intTime]
-            print("in getDarks w/ error")
-            print(darks)
+
             try:
                 params.fitsFiles['dark']
             except KeyError as e:

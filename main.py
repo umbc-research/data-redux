@@ -122,6 +122,7 @@ try:
                 flatGain = lightGain  #These should always be equal ... but we should check!
 
                 #Find the integration time for the flat frame in this filter and gain setting
+                # Refactor this, some of it is meaningless or can be cleaned up
                 flatIntTime = list(params.fitsFiles['flat'][lightFilter][flatGain].keys())[0]
 
                 #TODO: This should not fail if the above didn't exception-out, modify for flat-gain mismatches
@@ -136,12 +137,15 @@ try:
                 params.logger.info(f"\t\t\tFound darks for flat calibration")
                 params.logger.info(f"\t\t\t{darksForFlats}")
 
-                ### ACCUMULATE DARKS ### 
+                ### ACCUMULATE DARKS FOR FLATS ### 
                 masterDarkForFlat = redux_functions.accumulate(darksForFlats)
                 masterDarkForFlatFrame = Frame( masterDarkForFlat ,\
                                 type='master', filter=darksForFlats[0].filter, gain=darksForFlats[0].gain, \
                                 intTime=darksForFlats[0].intTime, header=darksForFlats[0].header)
                 darksForFlats.setMaster( masterDarkForFlatFrame )
+
+                sampleDFF = np.load('masterDarkFlat-V-0.80-data.npy')
+                print(f"SUM OF DARKS FOR FLATS DIFFS: {np.sum(np.abs(sampleDFF - masterDarkForFlat))}")
 
                 params.logger.info(f"\t\t\tGenerated Master Dark for Flat Calibration\n\t\t\t\t {masterDarkForFlatFrame}")
 
@@ -157,6 +161,9 @@ try:
                 flats.setMaster( masterFlatFrame )
 
                 lights.setFlatFrame(masterFlatFrame)
+                
+                flat_C = np.median(masterFlatFrame.data)
+
                 ######   Work on applying darks to light frames   ######
                 params.logger.info(f"\tWorking to generate Master Dark for light calibration")
 
@@ -178,7 +185,6 @@ try:
                 params.logger.info(f"\t\tGenerated master dark for light frame calibration")
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
-                flat_C = np.max(masterFlatFrame.data)
                 masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data/flat_C) for l in lights] )
 
                 masterLightFrame = Frame( masterLight , \
@@ -218,7 +224,7 @@ try:
     sourceList = starFind(finalLight.data)
 
     Y, X = np.ogrid[:params.length*2, :params.length*2]
-    dist = np.sqrt((X-params.length*2)**2 + (Y-params.length*2)**2)
+    dist = np.sqrt((X-params.length)**2 + (Y-params.length)**2)
     ones = np.ones((params.length*2, params.length*2))
 
     plt.figure(1)
@@ -239,15 +245,9 @@ try:
         fitparams, R2 = redux_functions.fitGaussian1D(radialData, p0, pixelLocs)
 
         background = fitparams[-1]
-        print(f"background: {background}")
-        #counts = np.sum(subFrame - background, where=dist<params.radius)
         counts = np.sum(subFrame, where=dist<params.radius)
-        #print(f"counts w/ background: {countsw}")
-        print(f"counts w/o background: {counts}")
         nPix = np.sum(ones, where=dist<params.radius)
-        print(f"nPix: {nPix}")
-        countFlux = ((counts/nPix) )/finalLight.intTime
-        print(f"count flux: {countFlux}")
+        countFlux = counts/nPix/finalLight.intTime
         instMag = -2.5*np.log10(countFlux)
 
         plt.figure(2)
