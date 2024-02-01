@@ -31,6 +31,7 @@ class Frame:
         self.gain = gain
         self.intTime = intTime
         self.header = header
+        #TODO: Add x,y dimensions as private parameter to check in append of FrameList
 
         if self.type == 'master':
             self.subFrameList = None

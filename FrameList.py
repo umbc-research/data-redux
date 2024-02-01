@@ -42,7 +42,10 @@ class FrameList(list):
             #check if conditions are all met
             if typeCond and filterCond and gainCond and intTimeCond:
                 #if frame belongs here, add it
-                super(FrameList, self).append(frame)  
+                super(FrameList, self).append(frame)
+            #TODO: Add additional check on x,y dimensions
+                # Check ndarray.shape matches between original frame and appended
+                # Check header x, y matches with original frame (should be priv variable)
             else: #If frame doesn't belong in this list, say why
                 raise Exception("This frame has different parameters than others in this list.\n"+\
                                  f"  Frame Type Match: {typeCond}"+\
