@@ -154,6 +154,10 @@ try:
 
                 ### ACCUMULATE Flats ### 
                 masterFlat = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats] )
+                flat_C = np.median(masterFlat)
+
+                #Normalize flat frame
+                masterFlat /= flat_C
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
                                 intTime=flats[0].intTime, header=flats[0].header)
@@ -162,7 +166,7 @@ try:
 
                 lights.setFlatFrame(masterFlatFrame)
                 
-                flat_C = np.median(masterFlatFrame.data)
+                
 
                 ######   Work on applying darks to light frames   ######
                 params.logger.info(f"\tWorking to generate Master Dark for light calibration")
@@ -185,7 +189,7 @@ try:
                 params.logger.info(f"\t\tGenerated master dark for light frame calibration")
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
-                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data/flat_C) for l in lights] )
+                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data) for l in lights] )
 
                 masterLightFrame = Frame( masterLight , \
                                 type='master', filter=lights[0].filter, gain=lights[0].gain, \
