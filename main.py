@@ -144,9 +144,7 @@ try:
                                 intTime=darksForFlats[0].intTime, header=darksForFlats[0].header)
                 darksForFlats.setMaster( masterDarkForFlatFrame )
 
-                sampleDFF = np.load('masterDarkFlat-V-0.80-data.npy')
-                print(f"SUM OF DARKS FOR FLATS DIFFS: {np.sum(np.abs(sampleDFF - masterDarkForFlat))}")
-
+                
                 params.logger.info(f"\t\t\tGenerated Master Dark for Flat Calibration\n\t\t\t\t {masterDarkForFlatFrame}")
 
                 # For the flat FrameList, set the appropriate master dark frame
