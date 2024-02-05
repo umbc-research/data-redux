@@ -241,6 +241,38 @@ def extractRadialData(subFrame, xC, yC):
     averageCountsPerRadiusBin = weightedRadiusHistogram / unweightedRadiusHistogram
     return averageCountsPerRadiusBin
 
-def accumulate(frameList):
-    return np.median( [f.data for f in frameList], axis=0 )
 
+#returns a tuple, [data, badpixelmap]
+def accumulate(frameList,listType=None):
+    sigma = 0
+    pixAvg = 0
+    badDistance = 3
+    badMap = np.full(frameList[0].data.shape, True)
+    if listType=="dark" or listType=="flat" :
+        for f in frameList:
+            pixAvg= np.average(f.data)
+            sigma=np.std(f.data)
+            for i in range(f.data.shape[0]):
+                for j in range(f.data.shape[1]):
+                    pixVal=f.data[i,j]
+                    if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma))):
+                        badMap[i][j]=False
+    if listType=="light":
+        pass
+        for j in range(frameList[0].data.shape[0]):
+            for k in range(frameList[0].data.shape[1]):
+                pixAvg=np.average([f.data[j,k] for f in frameList])
+                sigma = np.std([f.data[j,k] for f in frameList])
+                for f in frameList:
+                    pixVal=f.data[j,k]
+                    if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma)))\
+                    or (sigma==0) or (pixAvg == 0) or (pixAvg == 2^16 -1):
+                        badMap[i][j]=False     
+      #for all pixel values:
+            #avg all pixel values in that position for all frames
+            #std all pixel values in that position for all frames
+            #if value > pixavg + sigma OR value < pixavg + sigma OR pixavg = 0 OR sigma = 0
+                #modify the master badpixel map   
+    
+    print(f'Percent of Bad Pixels: \t {(badMap.size- np.count_nonzero(badMap))/badMap.size}')
+    return  [np.median( [f.data for f in frameList], axis=0 ),badMap]
