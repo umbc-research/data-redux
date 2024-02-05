@@ -161,6 +161,7 @@ Extracting Sources for Filter V: 100%|██████████████
 
 # Requirements
 UNSURE. But this is the output of my `pip3 list`. I'll refine this later!
+```
 neutron•livova-laptop ./data-redux
 pip3 list                                                                                                   
 Package         Version
@@ -191,3 +192,4 @@ six             1.16.0
 tqdm            4.66.1
 wheel           0.41.2
 zope.interface  6.1
+```
