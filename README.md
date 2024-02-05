@@ -2,11 +2,17 @@
 Code base of routines and the entire reduction pipeline for UMBC Observatory equipment
 
 # TO RUN:
-python3 main.py -r 15 -o analysis -d ../../fits/inst-mag-ngc/ -c calibration -length 50 -S 0 --level DEBUG --force -x U B R I
+`python3 main.py -r 15 -o analysis -d ../../fits/inst-mag-ngc/ -c calibration -length 50 -S 0 --level DEBUG --force -x U B R I`
+
+
 -d is data directory
+
 -c is calibration directory (if seperate)
+
 -O is output directory
+
 --save is base name of file
+
 -S is smoothing (set to 0 for now)
 
 # Pipeline
