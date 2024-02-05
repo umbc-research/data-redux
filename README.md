@@ -2,11 +2,17 @@
 Code base of routines and the entire reduction pipeline for UMBC Observatory equipment
 
 # TO RUN:
-python3 data_redux.py -D pg2213 -C calibration -O analysis -R 15 -L 25 -S 0 -x U B R I --save pg2213
--D is data directory
--C is calibration directory
--O is output
+`python3 main.py -r 15 -o analysis -d ../../fits/inst-mag-ngc/ -c calibration -length 50 -S 0 --level DEBUG --force -x U B R I`
+
+
+-d is data directory
+
+-c is calibration directory (if seperate)
+
+-O is output directory
+
 --save is base name of file
+
 -S is smoothing (set to 0 for now)
 
 # Pipeline
@@ -141,193 +147,47 @@ tree -d
     └── sa20_v_011_agon
         └── 20_03_44
 
-[proutyr1@/Users/proutyr1/Documents/git/data-redux]
-ls
-Observation.py README.md      analysis       calibration    data_redux.py  ngc7790        pg2213         redux.py       redux_funcs.py sa20
-[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+neutron•livova-laptop ./data-redux
+ls                                                                  
+analysis/  analysis-ngc/  FrameList.py  Frame.py  main.py  __pycache__/  README.md  redux_functions.py
 
-[proutyr1@/Users/proutyr1/Documents/git/data-redux]
-python3 data_redux.py -r 15 -o analysis -d pg2213 -c calibration -l 50 -S 0 --level DEBUG --force -x U B R I --no-flat 
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 411/411 [00:04<00:00, 102.25it/s]
-Done sorting files
-
-Starting work on new master light frame.
-  Working with light filter: V
-  Working with light gain: 150
-  Working with light integration time: 5
-    Got lights: 25x(Type:light, Filter:V, Gain:150, IntTime:5)
-    Got darks for lights: 20x(Type:dark, Filter:None, Gain:150, IntTime:5)
-[proutyr1@/Users/proutyr1/Documents/git/data-redux]
+neutron•livova-laptop ./data-redux
+python3 main.py -r 15 -o analysis-ngc -d ../../fits/inst-mag-ngc/ -c calibration -length 50 -S 0 --level DEBUG --force -x U B R I
+Finding FITS: 100%|█████████████████████████████████████████████████████████████████████████| 411/411 [00:23<00:00, 17.83it/s]
+Calibrating Light Frames: 100%|█████████████████████████████████████████████████████████████████| 1/1 [00:04<00:00,  4.15s/it]
+Extracting Sources for Filter V: 100%|████████████████████████████████████████████████████████| 10/10 [00:02<00:00,  4.21it/s]
 ```
 
 
 # Requirements
 UNSURE. But this is the output of my `pip3 list`. I'll refine this later!
-pip3 list
-Package                  Version
------------------------- ------------------
-aiocron                  1.8
-aiohttp                  3.8.4
-aiosignal                1.3.1
-altair                   5.0.1
-altgraph                 0.17.2
-anyio                    3.6.2
-appnope                  0.1.3
-APScheduler              3.10.1
-argon2-cffi              21.3.0
-argon2-cffi-bindings     21.2.0
-arrow                    1.2.3
-astroplan                0.9.dev68+g374ebb4
-astropy                  5.2.1
-astroquery               0.4.6
-asttokens                2.2.1
-async-timeout            4.0.2
-attrs                    22.2.0
-backcall                 0.2.0
-beautifulsoup4           4.12.2
-bleach                   6.0.0
-certifi                  2023.5.7
-cffi                     1.15.1
-charset-normalizer       3.1.0
-comm                     0.1.3
-configobj                5.0.8
-contourpy                1.0.7
-coverage                 7.1.0
-croniter                 1.3.15
-cycler                   0.11.0
-debugpy                  1.6.7
-decorator                5.1.1
-defusedxml               0.7.1
-discord.py               2.2.3
-exceptiongroup           1.1.0
-executing                1.2.0
-fastjsonschema           2.16.3
-fonttools                4.38.0
-fqdn                     1.5.1
-frozenlist               1.3.3
-future                   0.18.2
-h5py                     3.10.0
-html5lib                 1.1
-hypothesis               6.68.1
-idna                     3.4
-imageio                  2.25.0
-importlib-metadata       6.6.0
-iniconfig                2.0.0
-ipykernel                6.23.0
-ipython                  8.13.2
-ipython-genutils         0.2.0
-ipywidgets               8.0.6
-isoduration              20.11.0
-jaraco.classes           3.3.0
-jedi                     0.18.2
-Jinja2                   3.1.2
-joblib                   1.2.0
-jsonpointer              2.3
-jsonschema               4.17.3
-jupyter                  1.0.0
-jupyter_client           8.2.0
-jupyter-console          6.6.3
-jupyter_core             5.3.0
-jupyter-events           0.6.3
-jupyter_server           2.5.0
-jupyter_server_terminals 0.4.4
-jupyterlab-pygments      0.2.2
-jupyterlab-widgets       3.0.7
-keyring                  24.2.0
-kiwisolver               1.4.4
-ldap3                    2.9.1
-macholib                 1.15.2
-MarkupSafe               2.1.2
-matplotlib               3.6.3
-matplotlib-inline        0.1.6
-mistune                  2.0.5
-more-itertools           10.1.0
-multidict                6.0.4
-nbclassic                1.0.0
-nbclient                 0.7.4
-nbconvert                7.4.0
-nbformat                 5.8.0
-nest-asyncio             1.5.6
-notebook                 6.5.4
-notebook_shim            0.2.3
-numpy                    1.24.1
-packaging                23.0
-pandas                   2.0.1
-pandocfilters            1.5.0
-parso                    0.8.3
-pexpect                  4.8.0
-photutils                1.6.0
-pickleshare              0.7.5
-Pillow                   9.4.0
-pip                      23.2.1
-platformdirs             3.5.0
-pluggy                   1.0.0
-prettytable              3.6.0
-prometheus-client        0.16.0
-prompt-toolkit           3.0.38
-psutil                   5.9.4
-ptyprocess               0.7.0
-pure-eval                0.2.2
-pyasn1                   0.4.8
-pycparser                2.21
-pyerfa                   2.0.0.1
-Pygments                 2.15.1
-pyparsing                3.0.9
-pyraf                    2.2.1
-pyrsistent               0.19.3
-pytest                   7.2.1
-pytest-arraydiff         0.5.0
-pytest-astropy           0.10.0
-pytest-astropy-header    0.2.2
-pytest-cov               4.0.0
-pytest-doctestplus       0.12.1
-pytest-filter-subpackage 0.1.2
-pytest-mock              3.10.0
-pytest-openfiles         0.5.0
-pytest-remotedata        0.4.0
-python-dateutil          2.8.2
-python-dotenv            1.0.0
-python-json-logger       2.0.7
-pytz                     2022.7.1
-pyvo                     1.4.2
-PyYAML                   6.0
-pyzmq                    25.0.2
-qtconsole                5.4.3
-QtPy                     2.3.1
-requests                 2.31.0
-rfc3339-validator        0.1.4
-rfc3986-validator        0.1.1
-scikit-learn             1.2.2
-scipy                    1.10.0
-seaborn                  0.12.2
-Send2Trash               1.8.2
-setuptools               58.0.4
-six                      1.15.0
-sklearn                  0.0.post4
-sniffio                  1.3.0
-sortedcontainers         2.4.0
-soupsieve                2.4.1
-stack-data               0.6.2
-tabulate                 0.9.0
-terminado                0.17.1
-threadpoolctl            3.1.0
-tinycss2                 1.2.1
-tomli                    2.0.1
-tomorrow-io              0.0.3
-toolz                    0.12.0
-tornado                  6.3.1
-traitlets                5.9.0
-typing_extensions        4.5.0
-tzdata                   2023.3
-tzlocal                  5.0.1
-uri-template             1.2.0
-urllib3                  1.26.16
-wcwidth                  0.2.6
-webcolors                1.13
-webencodings             0.5.1
-websocket-client         1.5.1
-wheel                    0.37.0
-widgetsnbextension       4.0.7
-xmltodict                0.13.0
-yarl                     1.9.2
-zipp                     3.15.0
+neutron•livova-laptop ./data-redux
+pip3 list                                                                                                   
+Package         Version
+--------------- -------
+astropy         5.3.4
+contourpy       1.2.0
+cycler          0.12.1
+DateTime        5.4
+fonttools       4.47.2
+kiwisolver      1.4.5
+matplotlib      3.8.2
+mkl-fft         1.3.8
+mkl-random      1.2.4
+mkl-service     2.4.0
+numpy           1.26.3
+packaging       23.1
+photutils       1.10.0
+pillow          10.2.0
+pip             23.3.1
+pyerfa          2.0.0
+pyparsing       3.1.1
+python-dateutil 2.8.2
+pytz            2023.4
+PyYAML          6.0.1
+scipy           1.11.4
+setuptools      68.2.2
+six             1.16.0
+tqdm            4.66.1
+wheel           0.41.2
+zope.interface  6.1
