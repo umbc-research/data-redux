@@ -189,9 +189,16 @@ try:
                 lights.setDarkFrame(masterDarkForLightsFrame)
                 masterLight, masterLightMap = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data) for l in lights],"light" )
 
+
+                
+                ### add together all bad pixel maps
+                masterBadPixelMap= np.logical_xor(masterLightMap, np.logical_xor( masterDarkLightMap, np.logical_xor( masterDarkFlatMap ,masterFlatMap)))
+                
+                
+                
                 masterLightFrame = Frame( masterLight , \
                                 type='master', filter=lights[0].filter, gain=lights[0].gain, \
-                                intTime=lights[0].intTime, header=lights[0].header, badMap=masterLightMap)
+                                intTime=lights[0].intTime, header=lights[0].header, badMap=masterBadPixelMap)
                 params.logger.info(f"\t\t\tSet master light to {masterLightFrame}")
                 lights.setMaster( masterLightFrame )
 
@@ -225,6 +232,7 @@ try:
                             )
     sourceList = starFind(finalLight.data)
 
+    
     Y, X = np.ogrid[:params.length*2, :params.length*2]
     dist = np.sqrt((X-params.length)**2 + (Y-params.length)**2)
     ones = np.ones((params.length*2, params.length*2))
@@ -238,6 +246,7 @@ try:
         xc, yc = source[2], source[1]
         loc = (xc, yc)
         subFrame = finalLight.data[int(xc-params.length):int(xc+params.length),int(yc-params.length):int(yc+params.length)]
+        subFramePixelMap = finalLight.badMap[int(xc-params.length):int(xc+params.length),int(yc-params.length):int(yc+params.length)] 
         radial_data_raw = redux_functions.extractRadialData(subFrame, xC=params.length, yC=params.length)[:params.length]
         radialData = np.concatenate((radial_data_raw[::-1], radial_data_raw))
 
@@ -247,12 +256,19 @@ try:
         fitparams, R2 = redux_functions.fitGaussian1D(radialData, p0, pixelLocs)
 
         background = fitparams[-1]
-        counts = np.sum(subFrame-background, where=dist<params.radius)
-        print("Counts without background: ", counts)
+
+        countsNoFilter= np.sum(subFrame-background, where=dist<params.radius)
+
+        maskingArray= np.logical_and(subFramePixelMap, dist<params.radius)
+        maskedSubFrame = np.ma.masked_array(subFrame-background, maskingArray )
+        counts = np.sum(maskedSubFrame)
+
+        print(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
+        
         nPix = np.sum(ones, where=dist<params.radius)
         countFlux = counts/nPix/finalLight.intTime
         instMag = -2.5*np.log10(countFlux)
-
+        
         plt.figure(2)
         plt.subplot(1,2,1)
         plt.imshow(subFrame-background, cmap='gray')
