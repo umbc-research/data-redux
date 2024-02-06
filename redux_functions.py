@@ -258,7 +258,6 @@ def accumulate(frameList,listType=None):
                     if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma))):
                         badMap[i][j]=False
     if listType=="light":
-        pass
         for j in range(frameList[0].data.shape[0]):
             for k in range(frameList[0].data.shape[1]):
                 pixAvg=np.average([f.data[j,k] for f in frameList])
@@ -267,12 +266,7 @@ def accumulate(frameList,listType=None):
                     pixVal=f.data[j,k]
                     if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma)))\
                     or (sigma==0) or (pixAvg == 0) or (pixAvg == 2^16 -1):
-                        badMap[i][j]=False     
-      #for all pixel values:
-            #avg all pixel values in that position for all frames
-            #std all pixel values in that position for all frames
-            #if value > pixavg + sigma OR value < pixavg + sigma OR pixavg = 0 OR sigma = 0
-                #modify the master badpixel map   
+                        badMap[j][k]=False     
     
-    print(f'Percent of Bad Pixels: \t {(badMap.size- np.count_nonzero(badMap))/badMap.size}')
+    print(f'Percent of Bad Pixels: \t {100*(badMap.size- np.count_nonzero(badMap))/badMap.size}')
     return  [np.median( [f.data for f in frameList], axis=0 ),badMap]

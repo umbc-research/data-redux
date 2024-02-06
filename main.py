@@ -138,10 +138,10 @@ try:
                 params.logger.info(f"\t\t\t{darksForFlats}")
 
                 ### ACCUMULATE DARKS FOR FLATS ### 
-                masterDarkForFlat = redux_functions.accumulate(darksForFlats, "dark")[0]
+                masterDarkForFlat, masterDarkFlatMap = redux_functions.accumulate(darksForFlats, "dark")
                 masterDarkForFlatFrame = Frame( masterDarkForFlat ,\
                                 type='master', filter=darksForFlats[0].filter, gain=darksForFlats[0].gain, \
-                                intTime=darksForFlats[0].intTime, header=darksForFlats[0].header)
+                                intTime=darksForFlats[0].intTime, header=darksForFlats[0].header,badMap=masterDarkFlatMap)
                 darksForFlats.setMaster( masterDarkForFlatFrame )
 
                 
@@ -151,14 +151,14 @@ try:
                 flats.setDarkFrame( masterDarkForFlatFrame )
         
                 ### ACCUMULATE Flats ### 
-                masterFlat, badMapTest = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats], "flat" )
+                masterFlat, masterFlatMap = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats], "flat" )
                 flat_C = np.median(masterFlat)
 
                 #Normalize flat frame
                 masterFlat /= flat_C
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
-                                intTime=flats[0].intTime, header=flats[0].header)
+                                intTime=flats[0].intTime, header=flats[0].header, badMap=masterFlatMap)
                 params.logger.info(f"\t\t\t Generated master flat\n\t\t\t\t {masterFlatFrame}")
                 flats.setMaster( masterFlatFrame )
 
@@ -177,21 +177,21 @@ try:
                 # This finds all of the dark frames for this FrameList of light frames
                 darksForLight = redux_functions.getDarks(params, lights)
                 params.logger.info(f"\t\tFound darks for dark correcting light frames")
-                masterDarkForLights = redux_functions.accumulate( darksForLight, "dark" )[0]
+                masterDarkForLights, masterDarkLightMap= redux_functions.accumulate( darksForLight, "dark" )
                 masterDarkForLightsFrame = Frame( masterDarkForLights , \
                                 type='master', filter=darksForLight[0].filter, gain=darksForLight[0].gain, \
-                                intTime=darksForLight[0].intTime, header=darksForLight[0].header)
+                                intTime=darksForLight[0].intTime, header=darksForLight[0].header, badMap=masterDarkLightMap)
                 params.logger.info(f"\t\t\tSet master dark for lights to {masterDarkForLightsFrame}")
                 darksForLight.setMaster( masterDarkForLightsFrame )
 
                 params.logger.info(f"\t\tGenerated master dark for light frame calibration")
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
-                masterLight = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data) for l in lights],"light" )[0]
+                masterLight, masterLightMap = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data) for l in lights],"light" )
 
                 masterLightFrame = Frame( masterLight , \
                                 type='master', filter=lights[0].filter, gain=lights[0].gain, \
-                                intTime=lights[0].intTime, header=lights[0].header)
+                                intTime=lights[0].intTime, header=lights[0].header, badMap=masterLightMap)
                 params.logger.info(f"\t\t\tSet master light to {masterLightFrame}")
                 lights.setMaster( masterLightFrame )
 
