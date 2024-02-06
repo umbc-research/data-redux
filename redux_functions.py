@@ -242,31 +242,53 @@ def extractRadialData(subFrame, xC, yC):
     return averageCountsPerRadiusBin
 
 
-#returns a tuple, [data, badpixelmap]
+#returns a tuple, (data, badpixelmap)
 def accumulate(frameList,listType=None):
-    sigma = 0
-    pixAvg = 0
-    badDistance = 3
-    badMap = np.full(frameList[0].data.shape, True)
-    if listType=="dark" or listType=="flat" :
+    #Number of Standard Deviations from the Mean that are "good" pixels
+    numStd = 3
+
+    #Generate an all-true pixel mask to start with
+    #  This would mean a pixel mask where all pixels are labelled as "good"
+    goodMask = np.full(frameList[0].data.shape, True)
+
+    #Darks and Flats have good pixel masks for each frame
+    if listType == "dark" or listType == "flat":
         for f in frameList:
-            pixAvg= np.average(f.data)
-            sigma=np.std(f.data)
+            pixAvg = np.average(f.data)
+            sigma  = np.std(f.data)
+            frameMin, frameMax = pixAvg - (numStd*sigma), pixAvg + (numStd*sigma)
+            #There is a more pythonic way to accomplish this, but it looks right for now
             for i in range(f.data.shape[0]):
                 for j in range(f.data.shape[1]):
                     pixVal=f.data[i,j]
-                    if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma))):
-                        badMap[i][j]=False
+                    if (pixVal >= frameMax) or (pixVal <= frameMin):
+                        goodMask[i][j]=False
+
+            #Test to see if equivalent to the above
+            #figger out where this goes
+            testMask = ~np.logical_or(f.data < frameMin, f.data > frameMax )
+            print("DArks, Flats: ", testMask == goodMask)
+
+    #Lights have good pixel masks for each master frame
     if listType=="light":
         for j in range(frameList[0].data.shape[0]):
             for k in range(frameList[0].data.shape[1]):
-                pixAvg=np.average([f.data[j,k] for f in frameList])
-                sigma = np.std([f.data[j,k] for f in frameList])
+                pixelColumn = [f.data[j,k] for f in frameList]
+                pixAvg = np.average( pixelColumn )
+                sigma  = np.std( pixelColumn )
+                colMin, colMax = pixAvg - (numStd*sigma), pixAvg + (numStd*sigma)
+                #There is a more pythonic way to accomplish this, but it looks right for now
                 for f in frameList:
-                    pixVal=f.data[j,k]
-                    if (pixVal>=(pixAvg +(badDistance*sigma))) or (pixVal<=(pixAvg -(badDistance*sigma)))\
-                    or (sigma==0) or (pixAvg == 0) or (pixAvg == 2^16 -1):
-                        badMap[j][k]=False     
-    
-    print(f'Percent of Bad Pixels: \t {100*(badMap.size- np.count_nonzero(badMap))/badMap.size}')
-    return  [np.median( [f.data for f in frameList], axis=0 ),badMap]
+                    pixVal = f.data[j,k]
+                    if (pixVal >= colMax ) or (pixVal <= colMin ) or (sigma == 0) or (pixVal == 0):
+                        goodMask[j][k] = False 
+             
+        #Test to see if equivalent to the above
+        testPixAvg = np.average(frameList, axis=0)
+        testSigma = np.std(frameList, axis=0)
+        colWiseMin, colWiseMax = testPixAvg - (numStd*testSigma), testPixAvg + (numStd*testSigma)
+        testMask = np.logical_or.reduce(frameList < colWiseMin, frameList > colWiseMax, testSigma == 0, pixVal == 0)
+        print("Lights: ", testMask == goodMask)
+
+    print(f'Percent of Bad Pixels: \t {100*(goodMask.size- np.count_nonzero(goodMask))/goodMask.size}')
+    return  (np.median( [f.data for f in frameList], axis=0 ),goodMask)
