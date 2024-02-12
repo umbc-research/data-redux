@@ -264,10 +264,10 @@ def accumulate(frameList,listType=None):
                     if (pixVal >= frameMax) or (pixVal <= frameMin):
                         goodMask[i][j]=False
 
-            #Test to see if equivalent to the above
-            #figger out where this goes
-            testMask = ~np.logical_or(f.data < frameMin, f.data > frameMax )
-            print("DArks, Flats: ", testMask == goodMask)
+            # #Test to see if equivalent to the above
+            # #figger out where this goes
+            # testMask = ~np.logical_or(f.data < frameMin, f.data > frameMax )
+            # print("DArks, Flats: ", testMask == goodMask)
 
     #Lights have good pixel masks for each master frame
     if listType=="light":
@@ -284,11 +284,11 @@ def accumulate(frameList,listType=None):
                         goodMask[j][k] = False 
              
         #Test to see if equivalent to the above
-        testPixAvg = np.average(frameList, axis=0)
-        testSigma = np.std(frameList, axis=0)
-        colWiseMin, colWiseMax = testPixAvg - (numStd*testSigma), testPixAvg + (numStd*testSigma)
-        testMask = np.logical_or.reduce(frameList < colWiseMin, frameList > colWiseMax, testSigma == 0, pixVal == 0)
-        print("Lights: ", testMask == goodMask)
+        # testPixAvg = np.average(frameList, axis=0)
+        # testSigma = np.std(frameList, axis=0)
+        # colWiseMin, colWiseMax = testPixAvg - (numStd*testSigma), testPixAvg + (numStd*testSigma)
+        # testMask = np.logical_or.reduce(frameList < colWiseMin, frameList > colWiseMax, testSigma == 0, pixVal == 0)
+        # print("Lights: ", testMask == goodMask)
 
     print(f'Percent of Bad Pixels: \t {100*(goodMask.size- np.count_nonzero(goodMask))/goodMask.size}')
     return  (np.median( [f.data for f in frameList], axis=0 ),goodMask)
