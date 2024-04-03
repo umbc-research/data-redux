@@ -46,39 +46,6 @@ from FrameList import FrameList
         have a playground ish thing to mess with fits files without the whole script running 
 """
 
-
-"""
-Set up this directory the following way:
-    ./testDir/
-        /calibration/
-            /darks/
-            /flats/
-                /flat_u/
-                /flat_b/
-                /flat_v/
-                /flat_r/
-                /flat_i/
-        /light/
-            /obj1_u/
-            /obj1_b/
-            /obj1_v/
-            /obj1_r/
-            /obj1_i/
-        knownInformation.csv
-            knownInformation.csv to contain:
-             known total counts with pixel mask, counts  without pixel mask, bad pixel count, 
-             bad pixel locations
-"""
-
-
-testDir = "testObj1"
-print(f'Running fits-test with {testDir}')
-
-badPixTotal=0
-countsNoMask=0
-countsMask=0
-
-
 ##### from main.py
 #--datadir testObj1/ -caldir testObj1/calibration/ 
 #--outdir testObj1/analysis/ --radius 15 --length 25 --smoothing 1
@@ -289,13 +256,20 @@ try:
 
         background = fitparams[-1]
 
-        countsNoFilter= np.sum(subFrame-background, where=dist<params.radius)
+        backgroundCorrected = subFrame-background
+#        backgroundCorrected[backgroundCorrected< 0 ] = 0
+        
+        countsNoFilter= np.sum(backgroundCorrected, where=dist<params.radius)
 
         maskingArray= np.logical_and(subFramePixelMap, dist<params.radius)
-        maskedSubFrame = np.ma.masked_array(subFrame-background, maskingArray )
+        maskedSubFrame = np.ma.masked_array(backgroundCorrected, maskingArray )
+    
         counts = np.sum(maskedSubFrame)
+        
 
         print(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
+        print(f'Counts no pixelmap :\t{countsNoFilter}')
+        print(f'Counts  pixelmap :\t{counts}')
         
         nPix = np.sum(ones, where=dist<params.radius)
         countFlux = counts/nPix/finalLight.intTime
@@ -338,18 +312,17 @@ except Exception as e:
     params.logger.exception(e)
     params.logger.info("Exiting ...")
     exit()
-params.logger.info(f"Arrived at end of program. Exiting.")
+params.logger.info(f"Arrived at end of main.py script.")
 
 
 
 
 ##### end main,py code
 
-
 knownCountNoMask=0
 knownCountMask=0
 badPixLocations=[]
-with open(f'{testDir}/knownInformation.csv','r') as csvfile:
+with open(f'testObj1/knownInformation.csv','r') as csvfile:
     # known total counts with pixel mask, counts  without pixel mask, bad pixel locations
     # skip headers
     reader=csv.reader(csvfile)
@@ -358,15 +331,19 @@ with open(f'{testDir}/knownInformation.csv','r') as csvfile:
     # save count information
     knownCountMask=int(mainRow[0])
     knownCountNoMask=int(mainRow[1])
-    print(f'\n{knownCountNoMask}\t{knownCountMask}')
     #grab all bad pixel locations
     for row in reader:
         if len(row)>0 and row[0]:
             badPixLocations.append(row[0])
 
 
-print(f"Bad Pixels not found:\t {len(badPixLocations) - badPixTotal}\n \
-Counts without pixelMask diff:\t {countsNoMask-knownCountNoMask}\n \
-Counts with pixelMask diff:\t{countsMask-knownCountMask}\n")
 
-print("testing script finished with no errors")
+badPixTotal=np.size(masterBadPixelMap) - np.count_nonzero(masterBadPixelMap)
+countsNoMask=0
+countsMask=0
+
+
+params.logger.info(f"The following is calculated as (expected)-(actual)")
+params.logger.info(f"Bad Pixels diff:\t\t\t {len(badPixLocations) - badPixTotal}")
+params.logger.info(f"Counts without pixelMask diff:\t {knownCountNoMask-countsNoMask}")
+params.logger.info(f"Counts with pixelMask diff:\t{knownCountMask-countsMask}")
