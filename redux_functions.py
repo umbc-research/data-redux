@@ -119,19 +119,17 @@ def findFITS(params):
                     continue
                 if hdu.header['FRAMETYP'].lower() == "flat" and params.no_flat:
                     continue
+                if hdu.header['FRAMETYP'].lower()=='badpx':
+                    continue
 
                 frame = Frame(hdu.data, hdu.header['FRAMETYP'].lower(), hdu.header['FILTER'].upper(), \
                             hdu.header['GAIN'], hdu.header['EXPTIME'], hdu.header
                             )
-                
-                #print(f"Added frame {str(frame)}")
+                                            
             except Exception as e: #We expect bias and dark frames to fail to resolve the 'FILTER' key in the header
-                #print(e)
                 frame = Frame(hdu.data, type=hdu.header['FRAMETYP'].lower(), filter=None, \
                                 gain=hdu.header['GAIN'], intTime=hdu.header['EXPTIME'], header=hdu.header
                                 )
-                #print(f"Added frame {str(frame)}")
-                
             #Create all of the dictionaries!
             try:
                 #If frameList for filter is alr defined ...
@@ -165,9 +163,9 @@ def getDarks(params, frameList):
         gain = frameList[0].gain
         intTime = frameList[0].intTime
         try:
-
             darks = params.fitsFiles['dark'][None][gain][intTime]
         except KeyError as e:
+            print("test1")
             params.logger.exception(e)
             params.logger.info("\tIssue with Dark for Flats")
             darks = params.fitsFiles['dark'][None][gain][intTime]
@@ -175,17 +173,20 @@ def getDarks(params, frameList):
             try:
                 params.fitsFiles['dark']
             except KeyError as e:
+                print("test2")
                 params.logger.info("Unable to find darks. Exiting.")
                 exit()
             try:
                 params.fitsFiles['dark'][None]
             except KeyError as e:
+                print("test3")
                 params.logger.info("Dark dictionary improperly formatted. Filter is not None. Exiting.")
                 exit()
             try:
                 params.fitsFiles['dark'][None][gain]
             except KeyError as e:
                 #TODO: Provide override flag for just goofing around!
+                print("test4")
                 params.logger.info("Dark has different gain. Can proceed if --force flag used.")
                 if  params.fitsFiles.force:
                     params.logger.info("Functionality for proceeding with unequal gains not available yet.")
