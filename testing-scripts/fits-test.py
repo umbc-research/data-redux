@@ -231,6 +231,10 @@ try:
                             )
     sourceList = starFind(finalLight.data)
 
+    if len(sourceList) == 0:
+        params.logger.info(f"No sources found matching the {stafFind} parameterization. YA DONE FUCKED UP")
+        sys.exit()
+
     
     Y, X = np.ogrid[:params.length*2, :params.length*2]
     dist = np.sqrt((X-params.length)**2 + (Y-params.length)**2)
