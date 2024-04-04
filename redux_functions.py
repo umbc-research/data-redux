@@ -168,7 +168,7 @@ def getDarks(params, frameList):
             print("test1")
             params.logger.exception(e)
             params.logger.info("\tIssue with Dark for Flats")
-            darks = params.fitsFiles['dark'][None][gain][intTime]
+            #darks = params.fitsFiles['dark'][None][gain][intTime]
 
             try:
                 params.fitsFiles['dark']
