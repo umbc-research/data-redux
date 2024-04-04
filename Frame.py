@@ -36,16 +36,16 @@ class Frame:
         if self.type == 'master':
             self.subFrameList = None
         # TODO: Repalce this histFilter with a bad-pixel filter
-        
+
         histFilter = np.where((self.data<65535) & (self.data>0))
         self.badMap = badMap
-        
-#         self.std = np.std(self.data[histFilter])
-#         self.mean = np.mean(self.data[histFilter])
-#         self.median = np.median(self.data[histFilter])
-#         self.max = np.max(self.data[histFilter])
-#         self.min = np.min(self.data[histFilter])
-# 
+
+        self.std = np.std(self.data[histFilter])
+        self.mean = np.mean(self.data[histFilter])
+        self.median = np.median(self.data[histFilter])
+        self.max = np.max(self.data[histFilter])
+        self.min = np.min(self.data[histFilter])
+
         self.darkCorr = False
         self.flatCorr = False
 
