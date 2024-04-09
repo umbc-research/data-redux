@@ -37,15 +37,25 @@ class Frame:
             self.subFrameList = None
         # TODO: Repalce this histFilter with a bad-pixel filter
 
-        histFilter = np.where((self.data<65535) & (self.data>0))
+#         histFilter = np.where((self.data<65535) & (self.data>0))
+#         print(np.where((self.data<65535) & (self.data>0)))
+# 
+#         self.std = np.std(self.data[histFilter])
+#         self.mean = np.mean(self.data[histFilter])
+#         self.median = np.median(self.data[histFilter])
+#         self.max = np.max(self.data[histFilter])
+#         self.min = np.min(self.data[histFilter])
         self.badMap = badMap
-
-        self.std = np.std(self.data[histFilter])
-        self.mean = np.mean(self.data[histFilter])
-        self.median = np.median(self.data[histFilter])
-        self.max = np.max(self.data[histFilter])
-        self.min = np.min(self.data[histFilter])
-
+#        self.std = np.std(self.data[histFilter])
+#        self.mean = np.mean(self.data[histFilter])
+#        self.median = np.median(self.data[histFilter])
+#        self.max = np.max(self.data[histFilter])
+#        self.min = np.min(self.data[histFilter])
+        self.std = np.std(self.data)
+        self.mean = np.mean(self.data)
+        self.median = np.median(self.data)
+        self.max = np.max(self.data)
+        self.min = np.min(self.data)
         self.darkCorr = False
         self.flatCorr = False
 

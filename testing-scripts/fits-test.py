@@ -231,9 +231,44 @@ try:
                             )
     sourceList = starFind(finalLight.data)
 
-    if len(sourceList) == 0:
-        params.logger.info(f"No sources found matching the {stafFind} parameterization. YA DONE FUCKED UP")
-        sys.exit()
+    if (sourceList == None) or (len(sourceList) == 0):
+        params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (10 px)")
+        starFind = DAOStarFinder(threshold=finalLight.median, fwhm=10.0, \
+                                    sky=finalLight.mean, exclude_border=True, \
+                                    brightest=10, peakmax=finalLight.max
+                                    )
+        sourceList = starFind(finalLight.data)    
+        if (sourceList == None) or (len(sourceList) == 0):
+            params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (5 px)")
+            starFind = DAOStarFinder(threshold=finalLight.median, fwhm=5.0, \
+                                    sky=finalLight.mean, exclude_border=True, \
+                                    brightest=10, peakmax=finalLight.max
+                                    )
+            sourceList = starFind(finalLight.data)
+            if (sourceList == None) or (len(sourceList) == 0):    
+                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (25 px)")
+                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=25.0, \
+                                                    sky=finalLight.mean, exclude_border=True, \
+                                                    brightest=10, peakmax=finalLight.max
+                                                    )
+                sourceList = starFind(finalLight.data)
+                if (sourceList == None) or (len(sourceList) == 0):    
+                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (35 px)")
+                                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=35.0, \
+                                                                    sky=finalLight.mean, exclude_border=True, \
+                                                                    brightest=10, peakmax=finalLight.max
+                                                                    )
+                                sourceList = starFind(finalLight.data)
+                                if (sourceList == None) or (len(sourceList) == 0):    
+                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (50 px)")
+                                                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=50.0, \
+                                                                                    sky=finalLight.mean, exclude_border=True, \
+                                                                                    brightest=10, peakmax=finalLight.max
+                                                                                    )
+                                                sourceList = starFind(finalLight.data)
+                                                if (sourceList == None) or (len(sourceList) == 0):    
+                                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Giving up.")
+                                                                sys.exit()
 
     
     Y, X = np.ogrid[:params.length*2, :params.length*2]
