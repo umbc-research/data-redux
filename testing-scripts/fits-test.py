@@ -160,7 +160,10 @@ try:
                                 type='master', filter=darksForFlats[0].filter, gain=darksForFlats[0].gain, \
                                 intTime=darksForFlats[0].intTime, header=darksForFlats[0].header,badMap=masterDarkFlatMap)
                 darksForFlats.setMaster( masterDarkForFlatFrame )
-
+                if np.isnan(masterDarkForFlatFrame.data).any():
+                    print('found NaN in master dark for flats frame. aborting.')
+                    sys.exit()
+                                
                 
                 params.logger.info(f"\t\t\tGenerated Master Dark for Flat Calibration\n\t\t\t\t {masterDarkForFlatFrame}")
 
@@ -178,6 +181,12 @@ try:
                                 intTime=flats[0].intTime, header=flats[0].header, badMap=masterFlatMap)
                 params.logger.info(f"\t\t\t Generated master flat\n\t\t\t\t {masterFlatFrame}")
                 flats.setMaster( masterFlatFrame )
+                if np.where(masterFlatFrame.data)!=None:
+                    print(f' Master Flat has zeros:\t{np.where(masterFlatFrame.data)!=None}')
+                    exit()
+                if np.isnan(masterFlatFrame.data).any():
+                                    print('found NaN in master flat frame. aborting.')
+                                    sys.exit()
 
                 lights.setFlatFrame(masterFlatFrame)
                 
@@ -204,9 +213,16 @@ try:
                 params.logger.info(f"\t\tGenerated master dark for light frame calibration")
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
+                if np.isnan(masterDarkForLightsFrame.data).any():
+                    print('found NaN in master dark for lights frame. aborting.')
+                    sys.exit()
+
+
                 masterLight, masterLightMap = redux_functions.accumulate( [(l-masterDarkForLightsFrame)/(masterFlatFrame.data) for l in lights],"light" )
-
-
+                if np.isnan(masterLight.data).any():
+                        print('found NaN in master light frame. aborting.')
+                        sys.exit()
+    
                 
                 ### add together all bad pixel maps
                 masterBadPixelMap= np.logical_xor(masterLightMap, np.logical_xor( masterDarkLightMap, np.logical_xor( masterDarkFlatMap ,masterFlatMap)))
@@ -225,6 +241,9 @@ try:
     ##############################################
                 
     finalLight = masterLightFrame
+    if np.isnan(finalLight.data).any():
+        print('found NaN in final light frame. aborting.')
+        sys.exit()
     starFind = DAOStarFinder(threshold=finalLight.median, fwhm=20.0, \
                             sky=finalLight.mean, exclude_border=True, \
                             brightest=10, peakmax=finalLight.max
@@ -246,28 +265,28 @@ try:
                                     )
             sourceList = starFind(finalLight.data)
             if (sourceList == None) or (len(sourceList) == 0):    
-                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (25 px)")
+                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (25 px)")
                 starFind = DAOStarFinder(threshold=finalLight.median, fwhm=25.0, \
                                                     sky=finalLight.mean, exclude_border=True, \
                                                     brightest=10, peakmax=finalLight.max
                                                     )
                 sourceList = starFind(finalLight.data)
                 if (sourceList == None) or (len(sourceList) == 0):    
-                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (35 px)")
+                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (35 px)")
                                 starFind = DAOStarFinder(threshold=finalLight.median, fwhm=35.0, \
                                                                     sky=finalLight.mean, exclude_border=True, \
                                                                     brightest=10, peakmax=finalLight.max
                                                                     )
                                 sourceList = starFind(finalLight.data)
                                 if (sourceList == None) or (len(sourceList) == 0):    
-                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (50 px)")
+                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (50 px)")
                                                 starFind = DAOStarFinder(threshold=finalLight.median, fwhm=50.0, \
                                                                                     sky=finalLight.mean, exclude_border=True, \
                                                                                     brightest=10, peakmax=finalLight.max
                                                                                     )
                                                 sourceList = starFind(finalLight.data)
                                                 if (sourceList == None) or (len(sourceList) == 0):    
-                                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Giving up.")
+                                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. YA DONE FUCKED UP")
                                                                 sys.exit()
 
     
