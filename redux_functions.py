@@ -261,26 +261,21 @@ def accumulate(frameList,listType=None):
             goodMask = ~np.logical_or(f.data < frameMin, f.data > frameMax )
             
     #Lights have good pixel masks for each master frame
-    if listType=="light":
-        for j in range(frameList[0].data.shape[0]):
-            for k in range(frameList[0].data.shape[1]):
-                pixelColumn = [f.data[j,k] for f in frameList]
-                pixAvg = np.average( pixelColumn )
-                sigma  = np.std( pixelColumn )
-                colMin, colMax = pixAvg - (numStd*sigma), pixAvg + (numStd*sigma)
-                #There is a more pythonic way to accomplish this, but it looks right for now
-                for f in frameList:
-                    pixVal = f.data[j,k]
-                    if (pixVal >= colMax ) or (pixVal <= colMin ) or (sigma == 0) or (pixVal == 0):
-                        goodMask[j][k] = False 
-             
-        #Test to see if equivalent to the above
-        # testPixAvg = np.average(frameList, axis=0)
-        # testSigma = np.std(frameList, axis=0)
-        # colWiseMin, colWiseMax = testPixAvg - (numStd*testSigma), testPixAvg + (numStd*testSigma)
-        # testMask = np.logical_or.reduce(frameList < colWiseMin, frameList > colWiseMax, testSigma == 0, pixVal == 0)
-        # if not (np.array_equal(testMask,goodMask)):
-        #                 print('Light Bad Pixel Mismatch.')
+    if listType=="light":      
+        frameArray = np.array([f.data for f in frameList])
 
-    print(f'Percent of Bad Pixels: \t {100*(goodMask.size- np.count_nonzero(goodMask))/goodMask.size}')
+        pixelAvg = np.mean(frameArray, axis=0)
+        pixelStd = np.std(frameArray, axis=0)
+
+        colMin = pixelAvg - (numStd * pixelStd)
+        colMax = pixelAvg + (numStd * pixelStd)
+
+        goodMask1 = np.ones_like(frameArray[0], dtype=bool)
+
+        for f in frameList:
+            mask = ((f.data >= colMin) & (f.data <= colMax) & (pixelStd != 0) & (f.data != 0))
+            goodMask1 &= mask
+
+        goodMask = goodMask.astype(bool)    
+        
     return  (np.median( [f.data for f in frameList], axis=0 ),goodMask)

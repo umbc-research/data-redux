@@ -157,7 +157,7 @@ try:
 
                 ### ACCUMULATE DARKS FOR FLATS ### 
                 masterDarkForFlat, masterDarkFlatMap = redux_functions.accumulate(darksForFlats, "dark")
-
+                params.logger.info(f'Percent of Bad Pixels in Darks for Flats: \t {100*( masterDarkFlatMap.size- np.count_nonzero( masterDarkFlatMap))/ masterDarkFlatMap.size}')
 
                 #DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!1
                 masterDarkForFlat[masterDarkForFlat<=0] = 1
@@ -179,6 +179,7 @@ try:
         
                 ### ACCUMULATE Flats ### 
                 masterFlat, masterFlatMap = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats], "flat" )
+                params.logger.info(f'Percent of Bad Pixels in Flats: \t {100*( masterFlatMap.size- np.count_nonzero( masterFlatMap))/ masterFlatMap.size}')
                 flat_C = np.median(masterFlat)
 
                 #Normalize flat frame
@@ -186,9 +187,7 @@ try:
 
 
                 ## DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                print(masterFlat[masterFlat<=0] )
                 masterFlat[masterFlat<=0] = 1
-                print(masterFlat[masterFlat<=0])
 
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
@@ -275,45 +274,47 @@ try:
                             )
     sourceList = starFind(finalLight.data)
 
-    if (sourceList == None) or (len(sourceList) == 0):
-        params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (10 px)")
-        starFind = DAOStarFinder(threshold=finalLight.median, fwhm=10.0, \
-                                    sky=finalLight.mean, exclude_border=True, \
-                                    brightest=10, peakmax=finalLight.max
-                                    )
-        sourceList = starFind(finalLight.data)    
+    try: 
         if (sourceList == None) or (len(sourceList) == 0):
-            params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (5 px)")
-            starFind = DAOStarFinder(threshold=finalLight.median, fwhm=5.0, \
-                                    sky=finalLight.mean, exclude_border=True, \
-                                    brightest=10, peakmax=finalLight.max
-                                    )
-            sourceList = starFind(finalLight.data)
-            if (sourceList == None) or (len(sourceList) == 0):    
-                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (25 px)")
-                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=25.0, \
-                                                    sky=finalLight.mean, exclude_border=True, \
-                                                    brightest=10, peakmax=finalLight.max
-                                                    )
+            params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (10 px)")
+            starFind = DAOStarFinder(threshold=finalLight.median, fwhm=10.0, \
+                                        sky=finalLight.mean, exclude_border=True, \
+                                        brightest=10, peakmax=finalLight.max
+                                        )
+            sourceList = starFind(finalLight.data)    
+            if (sourceList == None) or (len(sourceList) == 0):
+                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a smaller FWHM Value (5 px)")
+                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=5.0, \
+                                        sky=finalLight.mean, exclude_border=True, \
+                                        brightest=10, peakmax=finalLight.max
+                                        )
                 sourceList = starFind(finalLight.data)
                 if (sourceList == None) or (len(sourceList) == 0):    
-                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (35 px)")
-                                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=35.0, \
-                                                                    sky=finalLight.mean, exclude_border=True, \
-                                                                    brightest=10, peakmax=finalLight.max
-                                                                    )
-                                sourceList = starFind(finalLight.data)
-                                if (sourceList == None) or (len(sourceList) == 0):    
-                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (50 px)")
-                                                starFind = DAOStarFinder(threshold=finalLight.median, fwhm=50.0, \
-                                                                                    sky=finalLight.mean, exclude_border=True, \
-                                                                                    brightest=10, peakmax=finalLight.max
-                                                                                    )
-                                                sourceList = starFind(finalLight.data)
-                                                if (sourceList == None) or (len(sourceList) == 0):    
-                                                                params.logger.info(f"No sources found matching the DAOStarFinger parameterization. YA DONE FUCKED UP")
-                                                                sys.exit()
-
+                    params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (25 px)")
+                    starFind = DAOStarFinder(threshold=finalLight.median, fwhm=25.0, \
+                                                        sky=finalLight.mean, exclude_border=True, \
+                                                        brightest=10, peakmax=finalLight.max
+                                                        )
+                    sourceList = starFind(finalLight.data)
+                    if (sourceList == None) or (len(sourceList) == 0):    
+                                    params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (35 px)")
+                                    starFind = DAOStarFinder(threshold=finalLight.median, fwhm=35.0, \
+                                                                        sky=finalLight.mean, exclude_border=True, \
+                                                                        brightest=10, peakmax=finalLight.max
+                                                                        )
+                                    sourceList = starFind(finalLight.data)
+                                    if (sourceList == None) or (len(sourceList) == 0):    
+                                                    params.logger.info(f"No sources found matching the DAOStarFinger parameterization. Running for a larger FWHM Value (50 px)")
+                                                    starFind = DAOStarFinder(threshold=finalLight.median, fwhm=50.0, \
+                                                                                        sky=finalLight.mean, exclude_border=True, \
+                                                                                        brightest=10, peakmax=finalLight.max
+                                                                                        )
+                                                    sourceList = starFind(finalLight.data)
+                                                    if (sourceList == None) or (len(sourceList) == 0):    
+                                                                    params.logger.info(f"No sources found matching the DAOStarFinger parameterization. YA DONE FUCKED UP")
+                                                                    sys.exit()
+    except:
+        pass
     
     Y, X = np.ogrid[:params.length*2, :params.length*2]
     dist = np.sqrt((X-params.length)**2 + (Y-params.length)**2)
@@ -350,9 +351,9 @@ try:
         counts = np.sum(maskedSubFrame)
         
 
-        print(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
-        print(f'Counts no pixelmap :\t{countsNoFilter}')
-        print(f'Counts  pixelmap :\t{counts}')
+        params.logger.info(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
+        params.logger.info(f'Counts no pixelmap :\t{countsNoFilter}')
+        params.logger.info(f'Counts  pixelmap :\t{counts}')
         
         nPix = np.sum(ones, where=dist<params.radius)
         countFlux = counts/nPix/finalLight.intTime
@@ -405,28 +406,29 @@ params.logger.info(f"Arrived at end of main.py script.")
 knownCountNoMask=0
 knownCountMask=0
 badPixLocations=[]
-with open(f'testObj1/knownInformation.csv','r') as csvfile:
-    # known total counts with pixel mask, counts  without pixel mask, bad pixel locations
-    # skip headers
-    reader=csv.reader(csvfile)
-    next(reader)
-    mainRow=next(reader)
-    # save count information
-    knownCountMask=int(mainRow[0])
-    knownCountNoMask=int(mainRow[1])
-    #grab all bad pixel locations
-    for row in reader:
-        if len(row)>0 and row[0]:
-            badPixLocations.append(row[0])
-
-
-
-badPixTotal=np.size(masterBadPixelMap) - np.count_nonzero(masterBadPixelMap)
-countsNoMask=0
-countsMask=0
-
-
-params.logger.info(f"The following is calculated as (expected)-(actual)")
-params.logger.info(f"Bad Pixels diff:\t\t\t {len(badPixLocations) - badPixTotal}")
-params.logger.info(f"Counts without pixelMask diff:\t {knownCountNoMask-countsNoMask}")
-params.logger.info(f"Counts with pixelMask diff:\t{knownCountMask-countsMask}")
+print(" now doing comparison stuff")
+# with open(f'testObj1/knownInformation.csv','r') as csvfile:
+#     # known total counts with pixel mask, counts  without pixel mask, bad pixel locations
+#     # skip headers
+#     reader=csv.reader(csvfile)
+#     next(reader)
+#     mainRow=next(reader)
+#     # save count information
+#     knownCountMask=int(mainRow[0])
+#     knownCountNoMask=int(mainRow[1])
+#     #grab all bad pixel locations
+#     for row in reader:
+#         if len(row)>0 and row[0]:
+#             badPixLocations.append(row[0])
+# 
+# 
+# 
+# badPixTotal=np.size(masterBadPixelMap) - np.count_nonzero(masterBadPixelMap)
+# countsNoMask=0
+# countsMask=0
+# 
+# 
+# params.logger.info(f"The following is calculated as (expected)-(actual)")
+# params.logger.info(f"Bad Pixels diff:\t\t\t {len(badPixLocations) - badPixTotal}")
+# params.logger.info(f"Counts without pixelMask diff:\t {knownCountNoMask-countsNoMask}")
+# params.logger.info(f"Counts with pixelMask diff:\t{knownCountMask-countsMask}")
