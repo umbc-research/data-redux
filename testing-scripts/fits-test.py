@@ -144,6 +144,7 @@ try:
 
                 #TODO: This should not fail if the above didn't exception-out, modify for flat-gain mismatches
                 #  This is because we use the light gain to sort the flats earlier on when we sort the FITS by type
+
                 flats =  params.fitsFiles['flat'][lightFilter][flatGain][flatIntTime]
                 params.logger.info(f"\t\tGot flats for filter {lightFilter}\n\t\t\t {flats}")
                     
@@ -156,6 +157,12 @@ try:
 
                 ### ACCUMULATE DARKS FOR FLATS ### 
                 masterDarkForFlat, masterDarkFlatMap = redux_functions.accumulate(darksForFlats, "dark")
+
+
+                #DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!1
+                masterDarkForFlat[masterDarkForFlat<=0] = 1
+
+
                 masterDarkForFlatFrame = Frame( masterDarkForFlat ,\
                                 type='master', filter=darksForFlats[0].filter, gain=darksForFlats[0].gain, \
                                 intTime=darksForFlats[0].intTime, header=darksForFlats[0].header,badMap=masterDarkFlatMap)
@@ -176,14 +183,25 @@ try:
 
                 #Normalize flat frame
                 masterFlat /= flat_C
+
+
+                ## DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                print(masterFlat[masterFlat<=0] )
+                masterFlat[masterFlat<=0] = 1
+                print(masterFlat[masterFlat<=0])
+
                 masterFlatFrame = Frame( masterFlat , \
                                 type='master', filter=flats[0].filter, gain=flats[0].gain, \
                                 intTime=flats[0].intTime, header=flats[0].header, badMap=masterFlatMap)
+
                 params.logger.info(f"\t\t\t Generated master flat\n\t\t\t\t {masterFlatFrame}")
+
+                
                 flats.setMaster( masterFlatFrame )
-                if np.where(masterFlatFrame.data)!=None:
+                if np.where(masterFlatFrame.data)==None:
                     print(f' Master Flat has zeros:\t{np.where(masterFlatFrame.data)!=None}')
                     exit()
+
                 if np.isnan(masterFlatFrame.data).any():
                                     print('found NaN in master flat frame. aborting.')
                                     sys.exit()
@@ -223,7 +241,14 @@ try:
                         print('found NaN in master light frame. aborting.')
                         sys.exit()
     
-                
+
+
+
+                ## DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                masterLight[masterLight<=0] = 1
+
+
+                                
                 ### add together all bad pixel maps
                 masterBadPixelMap= np.logical_xor(masterLightMap, np.logical_xor( masterDarkLightMap, np.logical_xor( masterDarkFlatMap ,masterFlatMap)))
                 
