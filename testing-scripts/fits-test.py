@@ -346,17 +346,20 @@ try:
         #DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!1        
         backgroundCorrected[backgroundCorrected< 0 ] = 0
 
-        countsNoFilter= np.sum(backgroundCorrected, where=dist<params.radius)
+        distMask       = ~(dist<params.radius)
+        maskedSubFrame_noPixMap =  np.ma.MaskedArray(backgroundCorrected, mask=distMask)
+        countsNoFilter = np.ma.sum(maskedSubFrame_noPixMap)
 
-        maskingArray= np.logical_and(subFramePixelMap, dist<params.radius)
-        
-        maskedSubFrame = np.ma.masked_array(backgroundCorrected, maskingArray )
-        print(f'masked size:{np.shape(maskedSubFrame)}\nunmasked size{np.shape(backgroundCorrected)}')
-        counts = np.ma.sum(maskedSubFrame)        
+        summationMask  = ~(subFramePixelMap==True) & ~(dist<params.radius)
+        maskedSubFrame = np.ma.MaskedArray(backgroundCorrected, mask=summationMask) 
+        counts         = np.ma.sum(maskedSubFrame)        
+
+        print(np.ma.allequal(maskedSubFrame, maskedSubFrame_noPixMap, fill_value=False))
+        print(counts==countsNoFilter)       
 
         params.logger.info(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
-        params.logger.info(f'Counts no pixelmap :\t{countsNoFilter}')
-        params.logger.info(f'Counts pixelmap :\t{counts}')
+        params.logger.info(f'Counts no pixel map  :\t{countsNoFilter}')
+        params.logger.info(f'Counts with pixel map:\t{counts}')
         
         nPix = np.sum(ones, where=dist<params.radius)
         countFlux = counts/nPix/finalLight.intTime
