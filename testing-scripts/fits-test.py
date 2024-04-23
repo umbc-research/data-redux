@@ -341,19 +341,22 @@ try:
         background = fitparams[-1]
 
         backgroundCorrected = subFrame-background
-#        backgroundCorrected[backgroundCorrected< 0 ] = 0
-        
+
+
+        #DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!1        
+        backgroundCorrected[backgroundCorrected< 0 ] = 0
+
         countsNoFilter= np.sum(backgroundCorrected, where=dist<params.radius)
 
         maskingArray= np.logical_and(subFramePixelMap, dist<params.radius)
-        maskedSubFrame = np.ma.masked_array(backgroundCorrected, maskingArray )
-    
-        counts = np.sum(maskedSubFrame)
         
+        maskedSubFrame = np.ma.masked_array(backgroundCorrected, maskingArray )
+        print(f'masked size:{np.shape(maskedSubFrame)}\nunmasked size{np.shape(backgroundCorrected)}')
+        counts = np.ma.sum(maskedSubFrame)        
 
         params.logger.info(f'Counts no pixelmap minus counts with pixel map:\t{countsNoFilter-counts}')
         params.logger.info(f'Counts no pixelmap :\t{countsNoFilter}')
-        params.logger.info(f'Counts  pixelmap :\t{counts}')
+        params.logger.info(f'Counts pixelmap :\t{counts}')
         
         nPix = np.sum(ones, where=dist<params.radius)
         countFlux = counts/nPix/finalLight.intTime
@@ -406,29 +409,4 @@ params.logger.info(f"Arrived at end of main.py script.")
 knownCountNoMask=0
 knownCountMask=0
 badPixLocations=[]
-print(" now doing comparison stuff")
-# with open(f'testObj1/knownInformation.csv','r') as csvfile:
-#     # known total counts with pixel mask, counts  without pixel mask, bad pixel locations
-#     # skip headers
-#     reader=csv.reader(csvfile)
-#     next(reader)
-#     mainRow=next(reader)
-#     # save count information
-#     knownCountMask=int(mainRow[0])
-#     knownCountNoMask=int(mainRow[1])
-#     #grab all bad pixel locations
-#     for row in reader:
-#         if len(row)>0 and row[0]:
-#             badPixLocations.append(row[0])
-# 
-# 
-# 
-# badPixTotal=np.size(masterBadPixelMap) - np.count_nonzero(masterBadPixelMap)
-# countsNoMask=0
-# countsMask=0
-# 
-# 
-# params.logger.info(f"The following is calculated as (expected)-(actual)")
-# params.logger.info(f"Bad Pixels diff:\t\t\t {len(badPixLocations) - badPixTotal}")
-# params.logger.info(f"Counts without pixelMask diff:\t {knownCountNoMask-countsNoMask}")
-# params.logger.info(f"Counts with pixelMask diff:\t{knownCountMask-countsMask}")
+# print(" now doing comparison stuff")
