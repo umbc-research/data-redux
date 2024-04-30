@@ -188,7 +188,7 @@ def getDarks(params, frameList):
                 #TODO: Provide override flag for just goofing around!
                 print("test4")
                 params.logger.info("Dark has different gain. Can proceed if --force flag used.")
-                if  params.fitsFiles.force:
+                if  params.force:
                     params.logger.info("Functionality for proceeding with unequal gains not available yet.")
                     exit()
             try:
@@ -196,7 +196,7 @@ def getDarks(params, frameList):
             except KeyError as e:
                 #TODO: Provide override flag for just goofing around!
                 params.logger.info("Dark has different integration time. Can proceed to scale thermal signal if --force flag used.")
-                if  params.fitsFiles.force:
+                if  params.force:
                     params.logger.info("Functionality providing thermal scaling not available yet")
                     exit()
                 else:
