@@ -115,11 +115,11 @@ def findFITS(params):
             #Carve-out for bias and dark frames for which header does not report filter
             try:
                 #Check to see if this filter was specified to be skipped
-                if hdu.header['FILTER'].upper() in params.excludeFilter[0]:
+                if hdu.header['FILTER'].upper().strip() in params.excludeFilter[0]:
                     continue
-                if hdu.header['FRAMETYP'].lower() == "flat" and params.no_flat:
+                if hdu.header['FRAMETYP'].lower().strip() == "flat" and params.no_flat:
                     continue
-                if hdu.header['FRAMETYP'].lower()=='badpx':
+                if hdu.header['FRAMETYP'].lower().strip() == 'badpx':
                     continue
 
                 frame = Frame(hdu.data, hdu.header['FRAMETYP'].lower(), hdu.header['FILTER'].upper(), \
@@ -248,34 +248,40 @@ def accumulate(frameList,listType=None):
     #Number of Standard Deviations from the Mean that are "good" pixels
     numStd = 3
 
-    #Generate an all-true pixel mask to start with
-    #  This would mean a pixel mask where all pixels are labelled as "good"
-    goodMask = np.full(frameList[0].data.shape, True)
+    goodMask = None
 
     #Darks and Flats have good pixel masks for each frame
-    if listType == "dark" or listType == "flat":
+    if listType == "dark":
+        #Generate an all-true pixel mask to start with
+        #  This would mean a pixel mask where all pixels are labelled as "good"
+        goodMask = np.full(frameList[0].data.shape, True)
+
         for f in frameList:
             pixAvg = np.average(f.data)
             sigma  = np.std(f.data)
             frameMin, frameMax = pixAvg - (numStd*sigma), pixAvg + (numStd*sigma)
-            goodMask = ~np.logical_or(f.data < frameMin, f.data > frameMax )
-            
-    #Lights have good pixel masks for each master frame
-    if listType=="light":      
-        frameArray = np.array([f.data for f in frameList])
-
-        pixelAvg = np.mean(frameArray, axis=0)
-        pixelStd = np.std(frameArray, axis=0)
-
-        colMin = pixelAvg - (numStd * pixelStd)
-        colMax = pixelAvg + (numStd * pixelStd)
-
-        goodMask1 = np.ones_like(frameArray[0], dtype=bool)
-
-        for f in frameList:
-            mask = ((f.data >= colMin) & (f.data <= colMax) & (pixelStd != 0) & (f.data != 0))
-            goodMask1 &= mask
+            goodMask &= ~np.logical_or(f.data < frameMin, f.data > frameMax )   
 
         goodMask = goodMask.astype(bool)    
-        
-    return  (np.median( [f.data for f in frameList], axis=0 ),goodMask)
+    
+    return  (np.median( [f.data for f in frameList], axis=0 ), goodMask)
+
+if __name__ == "__main__":
+    from astropy.io import fits
+    #Run through a few generated uncalibrated frames and test the stats of the generated mask
+    fileList = glob.glob("../fits-emulator/test/*dark*.fits")
+
+    for i, file in enumerate(fileList):
+        with fits.open(file) as hdul:
+            hdu = hdul[0]
+            frame = Frame(hdu.data, hdu.header['FRAMETYP'].lower(), None, \
+                        hdu.header['GAIN'], hdu.header['EXPTIME'], hdu.header
+                        )
+            if i == 0:
+               frameList = FrameList(frame)
+            #print(hdu.header['XPIXSZ'], len(frameList))
+            frameList.append(frame)
+
+    print(frameList)
+    gMask = accumulate(frameList, "dark")[1]
+    print(1.-np.sum(gMask)/gMask.flatten().shape[0])
