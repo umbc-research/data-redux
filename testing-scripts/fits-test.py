@@ -179,7 +179,9 @@ try:
         
                 ### ACCUMULATE Flats ### 
                 masterFlat, masterFlatMap = redux_functions.accumulate( [f.data-masterDarkForFlatFrame.data for f in flats], "flat" )
-                params.logger.info(f'Percent of Bad Pixels in Flats: \t {100*( masterFlatMap.size- np.count_nonzero( masterFlatMap))/ masterFlatMap.size}')
+                
+                ##ROY COMMENTED THIS OUT BC OLIVIA SAID IT WAS JUST DEBUGGGGGEN
+                #params.logger.info(f'Percent of Bad Pixels in Flats: \t {100*( masterFlatMap.size- np.count_nonzero( masterFlatMap))/ masterFlatMap.size}')
                 flat_C = np.median(masterFlat)
 
                 #Normalize flat frame
@@ -249,7 +251,7 @@ try:
 
                                 
                 ### add together all bad pixel maps
-                masterBadPixelMap= np.logical_xor(masterLightMap, np.logical_xor( masterDarkLightMap, np.logical_xor( masterDarkFlatMap ,masterFlatMap)))
+                masterBadPixelMap= masterDarkLightMap
                 
                 
                 
