@@ -87,7 +87,10 @@ if params.level == "DEBUG":
     params.logger.setLevel(logging.DEBUG)
 else:
     params.logger.setLevel(logging.INFO)
-
+if params.debug == True:
+    print("debugging")
+if params.debug == False:
+    print("not debugging")
 # Print some messages to the log
 params.logger.info(f"Created logger object.")
 params.logger.debug(f"Logger made with debugging level set.")
@@ -191,7 +194,8 @@ try:
                 )
                 darksForFlats.setMaster(masterDarkForFlatFrame)
                 if np.isnan(masterDarkForFlatFrame.data).any():
-                    print("found NaN in master dark for flats frame. aborting.")
+                    if params.debug == True:
+                        print("found NaN in master dark for flats frame. aborting.")
                     sys.exit()
 
                 params.logger.info(
@@ -232,13 +236,15 @@ try:
 
                 flats.setMaster(masterFlatFrame)
                 if np.where(masterFlatFrame.data) == None:
-                    print(
-                        f" Master Flat has zeros:\t{np.where(masterFlatFrame.data)!=None}"
-                    )
+                    if params.debug == True:
+                        print(
+                            f" Master Flat has zeros:\t{np.where(masterFlatFrame.data)!=None}"
+                        )
                     exit()
 
                 if np.isnan(masterFlatFrame.data).any():
-                    print("found NaN in master flat frame. aborting.")
+                    if params.debug ==True:
+                        print("found NaN in master flat frame. aborting.")
                     sys.exit()
 
                 lights.setFlatFrame(masterFlatFrame)
@@ -279,7 +285,8 @@ try:
 
                 lights.setDarkFrame(masterDarkForLightsFrame)
                 if np.isnan(masterDarkForLightsFrame.data).any():
-                    print("found NaN in master dark for lights frame. aborting.")
+                    if params.debug == True:
+                        print("found NaN in master dark for lights frame. aborting.")
                     sys.exit()
 
                 masterLight, masterLightMap = redux_functions.accumulate(
@@ -290,7 +297,8 @@ try:
                     "light",
                 )
                 if np.isnan(masterLight.data).any():
-                    print("found NaN in master light frame. aborting.")
+                    if params.debug ==True:
+                        print("found NaN in master light frame. aborting.")
                     sys.exit()
 
                 ## DO NOT KEEP THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -316,8 +324,10 @@ try:
     ##############################################
 
     finalLight = masterLightFrame
+    finalLight.data[0][0] = np.nan
     if np.isnan(finalLight.data).any():
-        print("found NaN in final light frame. aborting.")
+        if params.debug == True:
+            print("found NaN in final light frame. aborting.")
         sys.exit()
     starFind = DAOStarFinder(
         threshold=finalLight.median,

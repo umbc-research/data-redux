@@ -96,6 +96,7 @@ def setProgramArguments(params):
     # Specify sigma used for Gaussian smoothing of frames
     required.add_argument("--smoothing", "-S", "-smoothing", metavar="float", action="store", type=float, required=True,\
                         help="Float value in range [0,inf) used for STD of Gaussian Smoothing Filter")
+    required.add_argument("--debug", metavar="bool", default=False,action="store", type=bool, required=False,help="Toggles console printing for quick debugging")
 
     parser.parse_args(namespace=params)
 
