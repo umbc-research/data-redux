@@ -324,7 +324,6 @@ try:
     ##############################################
 
     finalLight = masterLightFrame
-    finalLight.data[0][0] = np.nan
     if np.isnan(finalLight.data).any():
         if params.debug == True:
             print("found NaN in final light frame. aborting.")
